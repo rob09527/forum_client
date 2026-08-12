@@ -1,0 +1,140 @@
+import type { User, LoginInput, RegisterInput, AuthResult, ApiResponse } from '~/types'
+
+export function useAuth() {
+  const config = useRuntimeConfig()
+  const apiBase = computed(() => import.meta.server ? (config.apiBase as string) : '')
+
+  /** 全局 auth 用户状态，跨组件共享（useState 按 key 共享） */
+  const authUser = useState<User | null>('auth-user', () => null)
+  const showAuthModal = useState<boolean>('auth-modal', () => false)
+  const authModalTab = useState<'login' | 'register'>('auth-modal-tab', () => 'login')
+
+  const isLoggedIn = computed(() => authUser.value !== null)
+  const isLoading = ref(false)
+  const isRestoring = ref(true) // 初始 session 恢复中
+
+  /**
+   * 恢复登录状态——应用启动时调用一次。
+   * 通过 httpOnly cookie 验证，无需传 token。
+   */
+  async function restoreSession(): Promise<void> {
+    try {
+      const res = await $fetch<{ success: boolean; data: { user: User } }>(
+        `${apiBase.value}/api/auth/me`
+      )
+      if (res.success && res.data.user) {
+        authUser.value = res.data.user
+      }
+    } catch {
+      // cookie 不存在或已过期，静默处理
+    } finally {
+      isRestoring.value = false
+    }
+  }
+
+  /** 邮箱登录 */
+  async function login(input: LoginInput): Promise<string | null> {
+    isLoading.value = true
+    try {
+      const res = await $fetch<ApiResponse<AuthResult>>(
+        `${apiBase.value}/api/auth/login`,
+        { method: 'POST', body: input }
+      )
+      if (res.success) {
+        authUser.value = res.data.user
+        showAuthModal.value = false
+        return null // 成功，无错误
+      }
+      return '登录失败，请重试'
+    } catch (err: any) {
+      return extractErrorMessage(err)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  /** 邮箱注册 */
+  async function register(input: RegisterInput): Promise<string | null> {
+    isLoading.value = true
+    try {
+      const res = await $fetch<ApiResponse<AuthResult>>(
+        `${apiBase.value}/api/auth/register`,
+        { method: 'POST', body: input }
+      )
+      if (res.success) {
+        authUser.value = res.data.user
+        showAuthModal.value = false
+        return null
+      }
+      return '注册失败，请重试'
+    } catch (err: any) {
+      return extractErrorMessage(err)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  /** 退出登录 */
+  async function logout(): Promise<void> {
+    try {
+      await $fetch(`${apiBase.value}/api/auth/logout`, { method: 'POST' })
+    } catch {
+      // 即使服务端退出失败，也清除本地状态
+    }
+    authUser.value = null
+  }
+
+  /** 打开登录弹窗 */
+  function openLogin() {
+    authModalTab.value = 'login'
+    showAuthModal.value = true
+  }
+
+  /** 打开注册弹窗 */
+  function openRegister() {
+    authModalTab.value = 'register'
+    showAuthModal.value = true
+  }
+
+  /** 关闭弹窗 */
+  function closeModal() {
+    showAuthModal.value = false
+  }
+
+  /** 更新当前用户状态（用于资料/头像更新后即时同步） */
+  function updateUser(patch: Partial<User>) {
+    if (authUser.value) {
+      authUser.value = { ...authUser.value, ...patch }
+    }
+  }
+
+  return {
+    user: authUser,
+    isLoggedIn,
+    isLoading,
+    isRestoring,
+    showAuthModal,
+    authModalTab,
+    login,
+    register,
+    logout,
+    restoreSession,
+    openLogin,
+    openRegister,
+    closeModal,
+    updateUser,
+  }
+}
+
+/** 从 fetch 异常中提取用户可读的错误消息 */
+function extractErrorMessage(err: any): string {
+  // Fastify 返回的 JSON 错误
+  if (err?.data?.error?.message) {
+    return err.data.error.message
+  }
+  // 网络错误
+  if (err?.message) {
+    return '网络连接失败，请检查网络后重试'
+  }
+  return '操作失败，请重试'
+}

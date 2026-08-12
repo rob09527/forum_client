@@ -1,0 +1,292 @@
+<template>
+  <div class="max-w-3xl mx-auto space-y-4">
+    <!-- 加载中 -->
+    <div v-if="pending" class="bg-zinc-800 rounded-lg border border-zinc-700/50 p-10 text-center text-sm text-zinc-500">
+      加载中…
+    </div>
+
+    <!-- 用户不存在 -->
+    <div v-else-if="!profile" class="bg-zinc-800 rounded-lg border border-zinc-700/50 p-10 text-center">
+      <p class="text-zinc-400 text-sm mb-3">用户不存在</p>
+      <NuxtLink to="/" class="text-sm text-blue-400 hover:text-blue-300">返回首页</NuxtLink>
+    </div>
+
+    <template v-else>
+      <!-- 用户信息卡 -->
+      <div class="bg-zinc-800 rounded-lg border border-zinc-700/50 p-6">
+        <div class="flex items-start gap-4">
+          <div class="flex flex-col items-center gap-2">
+            <button
+              v-if="isOwnProfile"
+              class="relative group cursor-pointer rounded-full transition-shadow hover:ring-2 hover:ring-blue-500/50"
+              title="点击更换头像"
+              @click="showAvatarPicker = true"
+            >
+              <Avatar :username="profile?.username" :avatar="profile?.avatar" size="xl" />
+              <div class="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <span class="text-white text-[10px] font-medium">更换</span>
+              </div>
+            </button>
+            <Avatar v-else :username="profile?.username" :avatar="profile?.avatar" size="xl" />
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-lg font-semibold text-zinc-100">{{ profile.username }}</span>
+              <span class="text-[11px] px-2 py-0.5 rounded font-medium" :class="levelClass">
+                {{ levelLabel }}
+              </span>
+              <span v-if="profile.stars > 0" class="text-[11px] px-2 py-0.5 rounded bg-yellow-500/15 text-yellow-400 font-medium">
+                ⭐ {{ profile.stars }}
+              </span>
+            </div>
+            <div class="text-xs text-zinc-500 mt-1">
+              注册于 {{ joinedDate }}
+            </div>
+            <p v-if="profile.bio" class="text-sm text-zinc-400 mt-3 leading-relaxed">{{ profile.bio }}</p>
+          </div>
+        </div>
+
+        <!-- 统计 -->
+        <div class="grid grid-cols-4 gap-3 mt-6">
+          <div class="text-center p-3 rounded-lg bg-zinc-900/60">
+            <div class="text-xl font-bold text-emerald-400">🍗 {{ formatCount(profile.points) }}</div>
+            <div class="text-[11px] text-zinc-500 mt-1">鸡腿余额</div>
+          </div>
+          <div class="text-center p-3 rounded-lg bg-zinc-900/60">
+            <div class="text-xl font-bold text-zinc-200">{{ formatCount(profile.totalPointsEarned) }}</div>
+            <div class="text-[11px] text-zinc-500 mt-1">累计获得</div>
+          </div>
+          <div class="text-center p-3 rounded-lg bg-zinc-900/60">
+            <div class="text-xl font-bold text-zinc-200">{{ formatCount(profile.postCount) }}</div>
+            <div class="text-[11px] text-zinc-500 mt-1">发帖</div>
+          </div>
+          <div class="text-center p-3 rounded-lg bg-zinc-900/60">
+            <div class="text-xl font-bold text-zinc-200">{{ formatCount(profile.commentCount) }}</div>
+            <div class="text-[11px] text-zinc-500 mt-1">评论</div>
+          </div>
+        </div>
+
+        <!-- 等级进度条 -->
+        <div class="mt-5 pt-4 border-t border-zinc-700/50">
+          <div class="flex items-center justify-between text-xs text-zinc-500 mb-2">
+            <span>等级进度 <span class="text-zinc-300">{{ levelLabel }}</span></span>
+            <span v-if="profile.levelProgress.nextLevelAt !== null">
+              还差 <span class="text-amber-400 font-medium">{{ profile.levelProgress.remaining }}</span> 鸡腿升 {{ nextLevelLabel }}
+            </span>
+            <span v-else class="text-emerald-400">已满级</span>
+          </div>
+          <div class="h-2 rounded-full bg-zinc-900 overflow-hidden">
+            <div
+              class="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-400 transition-all"
+              :style="{ width: levelPercent + '%' }"
+            ></div>
+          </div>
+          <p class="text-[11px] text-zinc-600 mt-2">
+            等级由「累计获得鸡腿」决定，消费不降级 [R20]
+          </p>
+        </div>
+      </div>
+
+      <!-- 头像选择弹窗 -->
+      <Teleport to="body">
+        <Transition name="modal">
+          <div
+            v-if="showAvatarPicker"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            @click.self="showAvatarPicker = false"
+          >
+            <div class="bg-zinc-800 border border-zinc-700/50 rounded-xl p-6 w-full max-w-lg mx-4 shadow-2xl">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-base font-semibold text-zinc-200">更换头像</h3>
+                <button
+                  class="text-zinc-500 hover:text-zinc-300 transition-colors text-lg leading-none"
+                  @click="showAvatarPicker = false"
+                >✕</button>
+              </div>
+              <AvatarPicker
+                :current-style="currentStyle"
+                :username="profile?.username ?? ''"
+                @select="handleAvatarSelect"
+              />
+              <p class="text-[11px] text-zinc-600 mt-4 text-center">
+                头像由 DiceBear 生成，相同风格 + 用户名 = 相同头像
+              </p>
+            </div>
+          </div>
+        </Transition>
+      </Teleport>
+
+      <!-- 积分流水 -->
+      <div class="bg-zinc-800 rounded-lg border border-zinc-700/50 p-6">
+        <h2 class="text-sm font-medium text-zinc-300 mb-4">🍗 积分流水</h2>
+
+        <div v-if="logLoading" class="py-6 text-center text-sm text-zinc-500">流水加载中…</div>
+        <div v-else-if="logItems.length === 0" class="py-8 text-center text-sm text-zinc-600">
+          还没有积分记录，去签到 / 发帖 / 评论赚鸡腿吧～
+        </div>
+        <div v-else class="divide-y divide-zinc-700/50">
+          <div v-for="item in logItems" :key="item.id" class="flex items-center justify-between py-3">
+            <div>
+              <div class="text-sm text-zinc-300">
+                {{ pointTypeLabel(item.type) }}
+                <span v-if="item.refId" class="text-zinc-600 text-xs ml-1">#{{ item.refId }}</span>
+              </div>
+              <div class="text-[11px] text-zinc-600 mt-0.5">{{ logTime(item.createdAt) }}</div>
+            </div>
+            <div class="text-right">
+              <span class="text-emerald-400 font-medium text-sm">+{{ item.delta }}</span>
+              <div class="text-[11px] text-zinc-600 mt-0.5">余额 {{ item.balanceAfter }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 分页 -->
+        <div v-if="logTotalPages > 1" class="flex justify-center mt-4">
+          <Pagination :current-page="logPage" :total-pages="logTotalPages" @page-change="handlePageChange" />
+        </div>
+      </div>
+    </template>
+  </div>
+</template>
+
+<script setup lang="ts">
+import type { PointLogItem, UserProfile } from '~/types'
+import { PointTypeLabel, UserLevelLabel } from '~/types'
+import { formatCount, levelBadgeClassFor } from '~/utils/format'
+import { useUserProfile } from '~/composables/useUserProfile'
+
+const route = useRoute()
+const toast = useToast()
+const { user, isLoggedIn, updateUser } = useAuth()
+
+const userId = Number(route.params.id)
+
+const { getProfile, getPointsLog } = useUserProfile()
+
+// ── 资料（SSR 可取，404 时展示不存在） ──
+const { data: profile, pending } = useAsyncData<UserProfile | null>(
+  `user-profile-${userId}`,
+  () => getProfile(userId).catch(() => null)
+)
+
+// ── 头像选择 ──
+const showAvatarPicker = ref(false)
+const avatarUpdating = ref(false)
+
+/** 当前用户是否在查看自己的资料 */
+const isOwnProfile = computed(() => isLoggedIn.value && user.value?.id === userId)
+
+/** 从 avatar URL 反推当前 DiceBear 风格（用于预览高亮） */
+const currentStyle = computed(() => {
+  const avatar = profile.value?.avatar
+  if (!avatar) return 'bottts-neutral'
+  // 匹配 DiceBear URL 中的风格段: /9.x/{style}/svg
+  const m = avatar.match(/dicebear\.com\/9\.x\/([^/]+)\/svg/)
+  return m ? m[1] : 'bottts-neutral'
+})
+
+async function handleAvatarSelect(style: string, seedSuffix: string) {
+  if (!isLoggedIn.value) return
+  avatarUpdating.value = true
+  try {
+    const seed = (profile.value?.username ?? '') + seedSuffix
+    const res = await $fetch<{ success: boolean; data: { avatar: string } }>(
+      '/api/user/me/avatar',
+      { method: 'PUT', body: { style, seed } }
+    )
+    if (res.success) {
+      // 更新全局 auth 状态（AppHeader 等会即时响应）
+      updateUser({ avatar: res.data.avatar })
+      // 替换整个 profile 对象触发 useAsyncData ref 的响应式更新
+      if (profile.value) {
+        profile.value = { ...profile.value, avatar: res.data.avatar }
+      }
+      showAvatarPicker.value = false
+      toast.add({ title: '头像已更新', color: 'success' })
+    }
+  } catch (err: any) {
+    toast.add({ title: err?.data?.error?.message ?? '更新失败', color: 'error' })
+  } finally {
+    avatarUpdating.value = false
+  }
+}
+
+// ── 积分流水（分页，客户端加载） ──
+const logItems = ref<PointLogItem[]>([])
+const logPage = ref(1)
+const logTotalPages = ref(0)
+const logLoading = ref(false)
+
+async function loadLog(page = 1) {
+  logLoading.value = true
+  try {
+    const res = await getPointsLog(userId, page, 20)
+    logItems.value = res.items
+    logTotalPages.value = res.totalPages
+    logPage.value = res.page
+  } catch {
+    logItems.value = []
+    logTotalPages.value = 0
+  } finally {
+    logLoading.value = false
+  }
+}
+
+function handlePageChange(page: number) {
+  loadLog(page)
+}
+
+if (import.meta.client) {
+  loadLog(1)
+}
+
+// ── 展示辅助 ──
+const levelClass = computed(() => levelBadgeClassFor(profile.value?.level))
+const levelLabel = computed(() => UserLevelLabel[profile.value?.level ?? ''] ?? profile.value?.level ?? '')
+const nextLevelLabel = computed(() => {
+  const next = profile.value?.levelProgress.nextLevelAt
+  if (next === null || next === undefined) return ''
+  // 按门槛反推下一等级：500 → 鸡肉；100 → 鸡腿
+  return next >= 500 ? '鸡肉' : next >= 100 ? '鸡腿' : '鸡爪'
+})
+
+/** 等级进度条百分比：当前累计 / 下一门槛 */
+const levelPercent = computed(() => {
+  const p = profile.value?.levelProgress
+  if (!p) return 0
+  if (p.nextLevelAt === null) return 100
+  // 以 0→下一门槛 为满刻度；对 claw(0) 起步按 0 处理
+  const total = p.nextLevelAt
+  const progress = Math.min(100, Math.max(0, (profile.value!.totalPointsEarned / total) * 100))
+  return Math.round(progress)
+})
+
+const joinedDate = computed(() => {
+  if (!profile.value) return ''
+  return new Date(profile.value.createdAt).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
+})
+
+function pointTypeLabel(type: string): string {
+  return PointTypeLabel[type] ?? type
+}
+
+function logTime(iso: string): string {
+  return new Date(iso).toLocaleString('zh-CN', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+</script>
+
+<style scoped>
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.2s ease;
+}
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+</style>

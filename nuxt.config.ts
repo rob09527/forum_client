@@ -16,16 +16,11 @@ export default defineNuxtConfig({
 
   nitro: {
     devProxy: {
-      '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-      },
+      '/api': 'http://127.0.0.1:3001/api',
     },
   },
 
-  vite: {
-    server: {
-      port: 3000,
-    },
+  devServer: {
+    port: 3000,
   },
 })

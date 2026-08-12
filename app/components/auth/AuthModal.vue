@@ -1,0 +1,367 @@
+<template>
+  <Teleport to="body">
+    <Transition name="modal">
+      <div
+        v-if="showAuthModal"
+        class="fixed inset-0 z-[100] flex items-center justify-center"
+        @click.self="closeModal"
+        @keydown.escape="closeModal"
+      >
+        <!-- 遮罩 -->
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+
+        <!-- 弹窗主体 -->
+        <div class="relative bg-zinc-900 border border-zinc-700/50 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+          <!-- Logo -->
+          <div class="text-center pt-8 pb-2">
+            <span class="text-2xl font-bold text-blue-400 tracking-tight">AI Base</span>
+            <p class="text-xs text-zinc-500 mt-1">AI 开发者的中文社区</p>
+          </div>
+
+          <!-- Tab 切换 -->
+          <div class="flex px-6 mt-4">
+            <button
+              :class="[
+                'flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors',
+                tab === 'login'
+                  ? 'border-blue-500 text-blue-400'
+                  : 'border-transparent text-zinc-500 hover:text-zinc-400'
+              ]"
+              @click="switchTab('login')"
+            >
+              登录
+            </button>
+            <button
+              :class="[
+                'flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors',
+                tab === 'register'
+                  ? 'border-blue-500 text-blue-400'
+                  : 'border-transparent text-zinc-500 hover:text-zinc-400'
+              ]"
+              @click="switchTab('register')"
+            >
+              注册
+            </button>
+          </div>
+
+          <!-- 表单区 -->
+          <div class="px-6 py-5 space-y-4">
+            <!-- ====== 登录表单 ====== -->
+            <template v-if="tab === 'login'">
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-xs text-zinc-500 mb-1.5 ml-0.5">邮箱</label>
+                  <input
+                    ref="loginEmailRef"
+                    v-model="loginForm.email"
+                    type="email"
+                    autocomplete="email"
+                    placeholder="your@email.com"
+                    class="w-full h-10 px-3.5 text-sm bg-zinc-800 border rounded-lg text-zinc-200 placeholder-zinc-600
+                           focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
+                    :class="loginErrors.email ? 'border-red-500/50' : 'border-zinc-700/50'"
+                    @blur="validateLoginEmail"
+                    @input="loginErrors.email = ''"
+                    @keydown.enter="handleLogin"
+                  />
+                  <p v-if="loginErrors.email" class="text-xs text-red-400 mt-1 ml-0.5">{{ loginErrors.email }}</p>
+                </div>
+                <div>
+                  <label class="block text-xs text-zinc-500 mb-1.5 ml-0.5">密码</label>
+                  <div class="relative">
+                    <input
+                      v-model="loginForm.password"
+                      :type="showLoginPwd ? 'text' : 'password'"
+                      autocomplete="current-password"
+                      placeholder="输入密码"
+                      class="w-full h-10 px-3.5 pr-10 text-sm bg-zinc-800 border rounded-lg text-zinc-200 placeholder-zinc-600
+                             focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
+                      :class="loginErrors.password ? 'border-red-500/50' : 'border-zinc-700/50'"
+                      @blur="validateLoginPassword"
+                      @input="loginErrors.password = ''"
+                      @keydown.enter="handleLogin"
+                    />
+                    <button
+                      type="button"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-400 text-sm transition-colors"
+                      @click="showLoginPwd = !showLoginPwd"
+                    >
+                      {{ showLoginPwd ? '🙈' : '👁' }}
+                    </button>
+                  </div>
+                  <p v-if="loginErrors.password" class="text-xs text-red-400 mt-1 ml-0.5">{{ loginErrors.password }}</p>
+                </div>
+              </div>
+
+              <!-- 错误信息 -->
+              <div
+                v-if="loginError"
+                class="flex items-center gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5"
+              >
+                <span class="flex-shrink-0">⚠️</span>
+                <span>{{ loginError }}</span>
+              </div>
+
+              <!-- 提交按钮 -->
+              <button
+                class="w-full h-11 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed
+                       text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                :disabled="isLoading"
+                @click="handleLogin"
+              >
+                <span v-if="isLoading" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>{{ isLoading ? '登录中...' : '登录' }}</span>
+              </button>
+
+              <p class="text-center text-xs text-zinc-500">
+                还没有账号？
+                <button class="text-blue-400 hover:text-blue-300 transition-colors" @click="switchTab('register')">立即注册</button>
+              </p>
+            </template>
+
+            <!-- ====== 注册表单 ====== -->
+            <template v-if="tab === 'register'">
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-xs text-zinc-500 mb-1.5 ml-0.5">用户名</label>
+                  <input
+                    ref="registerUsernameRef"
+                    v-model="registerForm.username"
+                    type="text"
+                    autocomplete="username"
+                    placeholder="3-20 个字符"
+                    class="w-full h-10 px-3.5 text-sm bg-zinc-800 border rounded-lg text-zinc-200 placeholder-zinc-600
+                           focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
+                    :class="registerErrors.username ? 'border-red-500/50' : 'border-zinc-700/50'"
+                    @blur="validateRegisterUsername"
+                    @input="registerErrors.username = ''"
+                    @keydown.enter="handleRegister"
+                  />
+                  <p v-if="registerErrors.username" class="text-xs text-red-400 mt-1 ml-0.5">{{ registerErrors.username }}</p>
+                </div>
+                <div>
+                  <label class="block text-xs text-zinc-500 mb-1.5 ml-0.5">邮箱</label>
+                  <input
+                    v-model="registerForm.email"
+                    type="email"
+                    autocomplete="email"
+                    placeholder="your@email.com"
+                    class="w-full h-10 px-3.5 text-sm bg-zinc-800 border rounded-lg text-zinc-200 placeholder-zinc-600
+                           focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
+                    :class="registerErrors.email ? 'border-red-500/50' : 'border-zinc-700/50'"
+                    @blur="validateRegisterEmail"
+                    @input="registerErrors.email = ''"
+                    @keydown.enter="handleRegister"
+                  />
+                  <p v-if="registerErrors.email" class="text-xs text-red-400 mt-1 ml-0.5">{{ registerErrors.email }}</p>
+                </div>
+                <div>
+                  <label class="block text-xs text-zinc-500 mb-1.5 ml-0.5">密码</label>
+                  <div class="relative">
+                    <input
+                      v-model="registerForm.password"
+                      :type="showRegisterPwd ? 'text' : 'password'"
+                      autocomplete="new-password"
+                      placeholder="至少 8 个字符"
+                      class="w-full h-10 px-3.5 pr-10 text-sm bg-zinc-800 border rounded-lg text-zinc-200 placeholder-zinc-600
+                             focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
+                      :class="registerErrors.password ? 'border-red-500/50' : 'border-zinc-700/50'"
+                      @blur="validateRegisterPassword"
+                      @input="registerErrors.password = ''"
+                      @keydown.enter="handleRegister"
+                    />
+                    <button
+                      type="button"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-400 text-sm transition-colors"
+                      @click="showRegisterPwd = !showRegisterPwd"
+                    >
+                      {{ showRegisterPwd ? '🙈' : '👁' }}
+                    </button>
+                  </div>
+                  <p v-if="registerErrors.password" class="text-xs text-red-400 mt-1 ml-0.5">{{ registerErrors.password }}</p>
+                </div>
+              </div>
+
+              <!-- 错误信息 -->
+              <div
+                v-if="registerError"
+                class="flex items-center gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5"
+              >
+                <span class="flex-shrink-0">⚠️</span>
+                <span>{{ registerError }}</span>
+              </div>
+
+              <!-- 提交按钮 -->
+              <button
+                class="w-full h-11 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed
+                       text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                :disabled="isLoading"
+                @click="handleRegister"
+              >
+                <span v-if="isLoading" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>{{ isLoading ? '注册中...' : '注册' }}</span>
+              </button>
+
+              <p class="text-center text-xs text-zinc-500">
+                已有账号？
+                <button class="text-blue-400 hover:text-blue-300 transition-colors" @click="switchTab('login')">立即登录</button>
+              </p>
+            </template>
+
+            <!-- Telegram 登录分隔线 -->
+            <div class="flex items-center gap-3">
+              <div class="flex-1 h-px bg-zinc-800" />
+              <span class="text-xs text-zinc-600">或</span>
+              <div class="flex-1 h-px bg-zinc-800" />
+            </div>
+
+            <button
+              class="w-full h-11 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30
+                     text-sky-400 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+              @click="handleTelegramLogin"
+            >
+              <span class="text-lg">✈️</span>
+              Telegram 一键登录
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
+</template>
+
+<script setup lang="ts">
+const {
+  showAuthModal,
+  authModalTab: tab,
+  login: doLogin,
+  register: doRegister,
+  isLoading,
+  closeModal,
+} = useAuth()
+
+// ── 登录表单 ──
+const loginForm = reactive({ email: '', password: '' })
+const loginErrors = reactive({ email: '', password: '' })
+const loginError = ref('')
+const showLoginPwd = ref(false)
+const loginEmailRef = ref<HTMLInputElement | null>(null)
+
+// ── 注册表单 ──
+const registerForm = reactive({ username: '', email: '', password: '' })
+const registerErrors = reactive({ username: '', email: '', password: '' })
+const registerError = ref('')
+const showRegisterPwd = ref(false)
+const registerUsernameRef = ref<HTMLInputElement | null>(null)
+
+// ── Tab 切换时自动聚焦 ──
+function switchTab(t: 'login' | 'register') {
+  tab.value = t
+  // 清除所有错误
+  loginError.value = ''
+  registerError.value = ''
+  Object.keys(loginErrors).forEach(k => (loginErrors[k as keyof typeof loginErrors] = ''))
+  Object.keys(registerErrors).forEach(k => (registerErrors[k as keyof typeof registerErrors] = ''))
+  // 聚焦第一个输入
+  nextTick(() => {
+    if (t === 'login') loginEmailRef.value?.focus()
+    else registerUsernameRef.value?.focus()
+  })
+}
+
+// ── 客户端验证 ──
+function validateLoginEmail() {
+  if (!loginForm.email) loginErrors.email = '请输入邮箱地址'
+  else if (!loginForm.email.includes('@')) loginErrors.email = '邮箱格式不正确'
+}
+function validateLoginPassword() {
+  if (!loginForm.password) loginErrors.password = '请输入密码'
+}
+function validateRegisterUsername() {
+  const v = registerForm.username
+  if (!v) registerErrors.username = '请输入用户名'
+  else if (v.length < 3 || v.length > 20) registerErrors.username = '用户名需要 3-20 个字符'
+}
+function validateRegisterEmail() {
+  if (!registerForm.email) registerErrors.email = '请输入邮箱地址'
+  else if (!registerForm.email.includes('@')) registerErrors.email = '邮箱格式不正确'
+}
+function validateRegisterPassword() {
+  const v = registerForm.password
+  if (!v) registerErrors.password = '请输入密码'
+  else if (v.length < 8) registerErrors.password = '密码至少需要 8 个字符'
+}
+
+function hasLoginErrors(): boolean {
+  validateLoginEmail()
+  validateLoginPassword()
+  return !!(loginErrors.email || loginErrors.password)
+}
+
+function hasRegisterErrors(): boolean {
+  validateRegisterUsername()
+  validateRegisterEmail()
+  validateRegisterPassword()
+  return !!(registerErrors.username || registerErrors.email || registerErrors.password)
+}
+
+// ── 提交 ──
+async function handleLogin() {
+  if (hasLoginErrors()) return
+  loginError.value = ''
+  const err = await doLogin({
+    email: loginForm.email.trim(),
+    password: loginForm.password,
+  })
+  if (err) loginError.value = err
+}
+
+async function handleRegister() {
+  if (hasRegisterErrors()) return
+  registerError.value = ''
+  const err = await doRegister({
+    username: registerForm.username.trim(),
+    email: registerForm.email.trim(),
+    password: registerForm.password,
+  })
+  if (err) registerError.value = err
+}
+
+function handleTelegramLogin() {
+  // TODO: 接入 Telegram Login Widget
+  closeModal()
+}
+
+// 弹窗打开时聚焦
+watch(showAuthModal, (open) => {
+  if (open) {
+    nextTick(() => {
+      if (tab.value === 'login') loginEmailRef.value?.focus()
+      else registerUsernameRef.value?.focus()
+    })
+  }
+})
+</script>
+
+<style scoped>
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.2s ease;
+}
+.modal-enter-active > div:last-child,
+.modal-leave-active > div:last-child {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+.modal-enter-from > div:last-child {
+  transform: scale(0.95) translateY(10px);
+  opacity: 0;
+}
+.modal-leave-to > div:last-child {
+  transform: scale(0.95) translateY(10px);
+  opacity: 0;
+}
+</style>
