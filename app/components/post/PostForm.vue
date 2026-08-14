@@ -196,7 +196,7 @@ const tagRecommendations = computed(() => {
   return pool
     .filter(t => {
       const lower = t.toLowerCase()
-      if (lower.length < 2 || selected.has(lower)) return false
+      if (lower.length < 2 || lower.length > 20 || selected.has(lower)) return false
       // 1. 标签完整出现在正文中
       if (text.includes(lower)) return true
       // 2. 复合标签拆词匹配（"AI Agent" → "agent" 命中）
