@@ -12,8 +12,9 @@ RUN sed -i "s@http://dl-cdn.alpinelinux.org/@https://repo.huaweicloud.com/@g" /e
 RUN apk add --no-cache tzdata
 ENV TZ=Asia/Shanghai
 
-# 切华为云源（实测比 npmmirror 快约 10 倍，且稳定）
-RUN npm config set registry https://mirrors.huaweicloud.com/repository/npm/
+# 默认切华为云源（本机国内构建快）；CI 用 --build-arg NPM_REGISTRY 覆盖为官方源
+ARG NPM_REGISTRY=https://mirrors.huaweicloud.com/repository/npm/
+RUN npm config set registry ${NPM_REGISTRY}
 RUN npm install -g pnpm@11
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
