@@ -3,8 +3,9 @@ import { useApiBase, extractErrorMessage } from './api'
 
 /**
  * 图片上传。
- * 发帖编辑器点图片按钮 → 选文件 → uploadImage(file) → 返回完整 URL → 插入 Markdown。
- * 成功后返回 { url, path }，失败抛异常（已转换为用户可读消息）。
+ * 发帖编辑器点图片按钮 → 选文件 → uploadImage(file) → 返回 { url, path }。
+ * 落库一律用相对 path（换域名/环境不失效，渲染时走同源反代解析）；url 仅供个别场景直接展示。
+ * 失败抛异常（已转换为用户可读消息）。
  */
 export function useUpload() {
   const apiBase = useApiBase()

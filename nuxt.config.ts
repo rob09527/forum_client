@@ -17,6 +17,7 @@ export default defineNuxtConfig({
   nitro: {
     devProxy: {
       '/api': 'http://127.0.0.1:3001/api',
+      '/uploads': 'http://127.0.0.1:3001/uploads',
     },
   },
 

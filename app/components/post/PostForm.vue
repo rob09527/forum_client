@@ -227,9 +227,9 @@ async function handleFile(e: Event) {
   input.value = '' // 允许连续选择同一文件
   if (!file) return
   try {
-    const { url } = await uploadImage(file)
-    // 插入 Markdown 图片语法，光标位置后
-    content.value += `\n![图片](${url})\n`
+    const { path } = await uploadImage(file)
+    // 插入 Markdown 图片语法（相对路径：换域名/换环境图片不失效，渲染时走同源反代解析）
+    content.value += `\n![图片](${path})\n`
   } catch (err: any) {
     error.value = err?.message || '图片上传失败'
   }
