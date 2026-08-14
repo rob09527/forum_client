@@ -5,7 +5,7 @@
 # ============================================================
 
 # ---- 构建阶段 ----
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 WORKDIR /app
 
 RUN sed -i "s@http://dl-cdn.alpinelinux.org/@https://repo.huaweicloud.com/@g" /etc/apk/repositories
@@ -24,7 +24,7 @@ COPY . .
 RUN pnpm run build
 
 # ---- 运行阶段 ----
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 RUN apk add --no-cache tzdata
