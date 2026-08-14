@@ -1,5 +1,17 @@
 <template>
   <div class="max-w-3xl mx-auto space-y-4">
+    <!-- 未登录：登录引导（详情接口需登录，SSR/首帧未登录先提示，与 /my/posts 同策略） -->
+    <div v-if="!isLoggedIn" class="bg-zinc-800 rounded-lg border border-zinc-700/50 p-10 text-center">
+      <p class="text-sm text-zinc-400 mb-4">登录后查看帖子内容</p>
+      <button
+        class="px-4 py-1.5 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
+        @click="openLogin"
+      >
+        登录
+      </button>
+    </div>
+
+    <template v-else>
     <!-- 加载中 -->
     <div v-if="pending" class="bg-zinc-800 rounded-lg border border-zinc-700/50 p-10 text-center text-sm text-zinc-500">
       加载中…
@@ -36,7 +48,9 @@
 
       <!-- 作者信息 -->
       <div class="flex items-center gap-3 pb-4 mb-4 border-b border-zinc-700/50">
-        <Avatar :username="post?.author.username" :avatar="post?.author.avatar" size="lg" />
+        <NuxtLink :to="`/user/${post.author.id}`" class="shrink-0">
+          <Avatar :username="post.author.username" :avatar="post.author.avatar" size="lg" />
+        </NuxtLink>
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2">
             <span class="text-sm font-medium text-zinc-200">{{ post.author.username }}</span>
@@ -121,6 +135,7 @@
       </div>
       <div v-else class="py-10 text-center text-sm text-zinc-600">还没有评论，来抢沙发吧～</div>
     </section>
+    </template>
   </div>
 </template>
 
@@ -144,10 +159,10 @@ const { getPost, removePost, likePost, unlikePost } = usePosts()
 const { comments, loadComments, createComment } = useComments()
 const { user, isLoggedIn, openLogin } = useAuth()
 
-// ── 帖子数据（SSR 可取，客户端导航时重新拉取） ──
-const { data: post, pending, refresh: refreshPost } = useAsyncData<PostDetail>(
+// ── 帖子数据（详情接口需登录；SSR 未登录 401 返回 null，登录后重拉） ──
+const { data: post, pending, refresh: refreshPost } = useAsyncData<PostDetail | null>(
   `post-${postId}`,
-  () => getPost(postId)
+  () => getPost(postId).catch(() => null)
 )
 
 // ── 评论数据（SSR 也加载，避免首屏闪"还没有评论"；操作后用 refresh 重拉） ──
@@ -155,6 +170,14 @@ const { pending: commentPending, refresh: refreshComments } = useAsyncData(
   `post-comments-${postId}`,
   () => loadComments(postId)
 )
+
+// 登录态从 null → 有值时重新拉取（详情/评论在登录后才需要）
+watch(isLoggedIn, (v) => {
+  if (v) {
+    refreshPost()
+    refreshComments()
+  }
+})
 
 // ── 点赞状态（后端详情不返回"是否已赞"，本地维护，重复点赞时报错时校准） ──
 const likeCount = ref(0)

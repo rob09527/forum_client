@@ -1,55 +1,108 @@
 /**
- * 头像 URL 生成工具。
- * 优先级：TG 照片（user.avatar）> 用户选择的 DiceBear 风格 > 默认 bottts-neutral 机器人头像
+ * 头像工具。
+ * 头像已完全本地化：不再依赖 DiceBear 外网服务（大陆访问不稳定），改为项目内置的预置头像
+ * （public/avatars/{style}/avatar-01.svg ~ avatar-20.svg）。
+ *
+ * 权威风格 id 列表由后端 /api/avatar-styles 下发（单一来源，见 useAvatarStyles），
+ * 本文件只保留 id → 展示文案（label/icon）的映射；确定性哈希算法与
+ * server/src/utils/avatar.ts 保持一致，保证「同用户名在前后端算出的头像路径完全一致」。
+ *
+ * 展示优先级：TG 照片（真实外链）> 本地预置头像（avatar 为 /avatars/... 或按用户名确定性映射）
  */
 
-/** DiceBear 9.x 可选头像风格 */
-export const DICEBEAR_STYLES = [
-  { id: 'bottts-neutral',     label: '机器人', icon: '🤖' },
-  { id: 'avataaars',          label: '卡通',   icon: '👤' },
-  { id: 'pixel-art',          label: '像素',   icon: '👾' },
-  { id: 'identicon',          label: '几何',   icon: '🔷' },
-  { id: 'lorelei',            label: '顽趣',   icon: '😄' },
-  { id: 'thumbs',             label: '拇指',   icon: '👍' },
-  { id: 'rings',              label: '环形',   icon: '💍' },
-  { id: 'shapes',             label: '形状',   icon: '🔺' },
-  { id: 'adventurer',         label: '冒险',   icon: '🧭' },
-  { id: 'adventurer-neutral', label: '冒险2',  icon: '🗺️' },
-  { id: 'big-ears',           label: '大耳',   icon: '👂' },
-  { id: 'big-ears-neutral',   label: '大耳2',  icon: '🐰' },
-  { id: 'big-smile',          label: '笑脸',   icon: '😁' },
-  { id: 'croodles',           label: '涂鸦',   icon: '✏️' },
-  { id: 'croodles-neutral',   label: '涂鸦2',  icon: '🖍️' },
-  { id: 'fun-emoji',          label: '表情',   icon: '😎' },
-  { id: 'glass',              label: '玻璃',   icon: '🪟' },
-  { id: 'micah',              label: '米卡',   icon: '🧑' },
-  { id: 'miniavs',            label: '迷你',   icon: '🟢' },
-  { id: 'notionists',         label: '印象',   icon: '🎨' },
-  { id: 'notionists-neutral', label: '印象2',  icon: '🖼️' },
-  { id: 'open-peeps',         label: '人物',   icon: '🙂' },
-  { id: 'personas',           label: '角色',   icon: '🦸' },
-] as const
+/** 风格 id → 展示文案（纯展示，与后端 id 顺序无关；id 列表以后端下发为准） */
+const STYLE_META: Record<string, { label: string; icon: string }> = {
+  'bottts-neutral':     { label: '机器人', icon: '🤖' },
+  avataaars:            { label: '卡通',   icon: '👤' },
+  'pixel-art':          { label: '像素',   icon: '👾' },
+  identicon:            { label: '几何',   icon: '🔷' },
+  lorelei:              { label: '顽趣',   icon: '😄' },
+  thumbs:               { label: '拇指',   icon: '👍' },
+  adventurer:           { label: '冒险',   icon: '🧭' },
+  'adventurer-neutral': { label: '冒险2',  icon: '🗺️' },
+  'big-ears':           { label: '大耳',   icon: '👂' },
+  'big-ears-neutral':   { label: '大耳2',  icon: '🐰' },
+  'big-smile':          { label: '笑脸',   icon: '😁' },
+  croodles:             { label: '涂鸦',   icon: '✏️' },
+  'croodles-neutral':   { label: '涂鸦2',  icon: '🖍️' },
+  'fun-emoji':          { label: '表情',   icon: '😎' },
+  micah:                { label: '米卡',   icon: '🧑' },
+  miniavs:              { label: '迷你',   icon: '🟢' },
+  notionists:           { label: '印象',   icon: '🎨' },
+  'notionists-neutral': { label: '印象2',  icon: '🖼️' },
+  'open-peeps':         { label: '人物',   icon: '🙂' },
+  personas:             { label: '角色',   icon: '🦸' },
+}
 
-export type DicebearStyle = (typeof DICEBEAR_STYLES)[number]['id']
+/** 头像风格定义（id + 展示文案），AvatarPicker 用 */
+export interface AvatarStyleDef {
+  id: string
+  label: string
+  icon: string
+}
+
+/** 由后端下发的权威风格 id 列表派生展示列表（未知 id 兜底显示 id 本身） */
+export function deriveStyleDefs(styleIds: string[]): AvatarStyleDef[] {
+  return styleIds.map((id) => ({
+    id,
+    label: STYLE_META[id]?.label ?? id,
+    icon: STYLE_META[id]?.icon ?? '👤',
+  }))
+}
+
+/** 每个风格的本地预置头像数量（avatar-01.svg ~ avatar-20.svg），与后端 AVATARS_PER_STYLE 一致 */
+export const AVATARS_PER_STYLE = 20
+
+/** 风格列表未就绪（后端不可达/首帧未返回）时的兜底，避免确定性映射对空数组取下标 */
+const FALLBACK_STYLES = ['bottts-neutral']
+
+/** 本地头像路径：/avatars/{style}/avatar-{nn}.svg */
+export function localAvatarPath(style: string, index: number): string {
+  return `/avatars/${style}/avatar-${String(index).padStart(2, '0')}.svg`
+}
+
+/** 简单确定性哈希（djb2），把用户名稳定映射到 0..mod-1。与 server/src/utils/avatar.ts 保持一致 */
+function hashIndex(name: string, mod: number): number {
+  let h = 5381
+  for (let i = 0; i < name.length; i++) {
+    h = (h * 33 + name.charCodeAt(i)) >>> 0
+  }
+  return h % mod
+}
 
 /**
- * 根据用户名生成 DiceBear 头像 URL。
- * @param username - 用户名，作为随机种子
- * @param style - DiceBear 风格，默认 bottts-neutral
+ * 用户名 → 确定性本地头像路径（同用户名永远同头像）。
+ * @param styleIds 后端下发的权威风格 id 列表（顺序即映射依据；空数组走 FALLBACK_STYLES）
  */
-export function dicebearUrl(username: string, style: string = 'bottts-neutral'): string {
-  return `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(username)}`
+export function deterministicLocalAvatar(username: string, styleIds: string[]): string {
+  const styles = styleIds.length > 0 ? styleIds : FALLBACK_STYLES
+  const idx = hashIndex(username, styles.length * AVATARS_PER_STYLE)
+  // idx 始终落在 0..styles.length*PER-1，商必为合法风格下标
+  const style = styles[Math.floor(idx / AVATARS_PER_STYLE)]!
+  const n = (idx % AVATARS_PER_STYLE) + 1
+  return localAvatarPath(style, n)
 }
 
 /**
  * 解析用户头像展示 URL。
- * - 有 avatar（TG 照片或用户已选择的 DiceBear URL）→ 直接用
- * - 有 username → DiceBear 默认风格自动生成
- * - 都没有 → null
+ * - avatar 为本地预置路径（/avatars/...）→ 直接用
+ * - avatar 为旧 DiceBear URL → 映射到本地确定性头像（去外网依赖）
+ * - avatar 为其他真实图片（TG 照片等）→ 直接用
+ * - 都没有 → 用户名确定性映射到本地头像
+ * @param styleIds 后端下发的权威风格 id 列表（未就绪时传空数组，内部兜底）
  */
-export function getAvatarUrl(username?: string | null, avatar?: string | null): string | null {
+export function getAvatarUrl(
+  username?: string | null,
+  avatar?: string | null,
+  styleIds?: string[],
+): string | null {
+  const styles = styleIds ?? []
+  if (avatar && avatar.startsWith('/avatars/')) return avatar
+  if (avatar && avatar.includes('api.dicebear.com')) {
+    return username ? deterministicLocalAvatar(username, styles) : null
+  }
   if (avatar) return avatar
-  if (username) return dicebearUrl(username)
+  if (username) return deterministicLocalAvatar(username, styles)
   return null
 }
 

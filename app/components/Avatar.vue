@@ -31,6 +31,7 @@
 
 <script setup lang="ts">
 import { getAvatarUrl, avatarInitial } from '~/utils/avatar'
+import { useAvatarStyles } from '~/composables/useAvatarStyles'
 
 const props = withDefaults(defineProps<{
   username?: string | null
@@ -60,7 +61,10 @@ const textSizeMap: Record<string, string> = {
 const sizeClass = computed(() => sizeMap[props.size])
 const fallbackTextClass = computed(() => `${textSizeMap[props.size]} text-zinc-400`)
 
-const src = computed(() => getAvatarUrl(props.username, props.avatar))
+// 权威风格清单（后端下发），未就绪时为空数组，getAvatarUrl 内部兜底为单一风格
+const { data: avatarStyles } = useAvatarStyles()
+
+const src = computed(() => getAvatarUrl(props.username, props.avatar, avatarStyles.value?.styles))
 const initial = computed(() => avatarInitial(props.username))
 
 const imgRef = ref<HTMLImageElement | null>(null)

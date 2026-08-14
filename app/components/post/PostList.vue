@@ -42,12 +42,7 @@
     <!-- 帖子列表 -->
     <div v-else class="divide-y divide-zinc-800">
       <template v-for="(post, idx) in posts" :key="post.id">
-        <AdSlot
-          v-if="idx === 5"
-          label="广告位 · 帖子列表内嵌"
-          size="728×90"
-          variant="inline"
-        />
+        <AdSlot v-if="idx === 5 && inlineAd" :ad="inlineAd" />
         <PostItem :post="post" />
       </template>
     </div>
@@ -64,8 +59,9 @@
 </template>
 
 <script setup lang="ts">
-import type { PostListItem } from '~/types'
+import type { PostListItem, Advert } from '~/types'
 import { sortOptions } from '~/constants/categories'
+import { useAdverts } from '~/composables/useAdverts'
 
 const props = defineProps<{
   posts: PostListItem[]
@@ -81,6 +77,18 @@ const emit = defineEmits<{
 
 const sortBy = ref('latest')
 const currentPage = ref(1)
+
+// 帖子列表内嵌广告（position=inline，多条时每次获取随机抽取一条展示）
+const { adverts } = useAdverts()
+const inlineAd = ref<Advert | null>(null)
+watch(
+  () => adverts.value,
+  (list) => {
+    const pool = list.filter((a) => a.position === 'inline')
+    inlineAd.value = pool.length ? pool[Math.floor(Math.random() * pool.length)]! : null
+  },
+  { immediate: true }
+)
 
 function selectSort(sort: string) {
   if (sortBy.value === sort) return

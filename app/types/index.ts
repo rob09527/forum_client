@@ -73,18 +73,54 @@ export interface Category {
   postCount: string
 }
 
+/** 公告类型 */
+export type AnnouncementType = 'normal' | 'important' | 'urgent' | 'activity'
+
+/** 公告圆点颜色（按类型映射，替代写死的 dotColor 样式串） */
+export const ANNOUNCEMENT_DOT_COLOR: Record<AnnouncementType, string> = {
+  normal: 'text-zinc-400',
+  important: 'text-blue-400',
+  urgent: 'text-red-400',
+  activity: 'text-emerald-400',
+}
+
+/** 公告（与后端 AnnouncementPublic 对齐） */
 export interface Announcement {
   id: number
   title: string
-  dotColor: string
+  type: AnnouncementType
+  link: string | null
 }
 
-export interface LatestReply {
-  content: string
-  user: string
-  time: string
-  initial: string
-  color: string
+/** 广告位位置（top 顶部横幅已下线） */
+export type AdvertPosition = 'sidebar' | 'inline'
+
+/** 广告位中文映射（后台管理页展示用） */
+export const AdvertPositionLabel: Record<AdvertPosition, string> = {
+  sidebar: '侧边栏',
+  inline: '列表内嵌',
+}
+
+/** 广告（与后端 AdvertPublic 对齐） */
+export interface Advert {
+  id: number
+  title: string | null
+  image: string
+  position: AdvertPosition
+  link: string | null
+  sortOrder: number
+}
+
+/** 最新注册用户项（侧边栏「欢迎新用户」展示用，与后端 NewUserItem 对齐） */
+export interface NewUser {
+  /** 用户 ID */
+  id: number
+  /** 用户名 */
+  username: string
+  /** 头像 URL，null 时前端用默认头像 */
+  avatar: string | null
+  /** 注册时间，ISO 8601 */
+  createdAt: string
 }
 
 export interface SortOption {
@@ -154,8 +190,8 @@ export interface UserProfile {
   bio: string | null
   /** 用户等级（claw | leg | meat） */
   level: string
-  /** 鸡腿余额 */
-  points: number
+  /** 鸡腿余额。仅本人可见，陌生人返回 null */
+  points: number | null
   /** 累计获得鸡腿，决定等级 [R20] */
   totalPointsEarned: number
   /** 星辰（荣誉）[R30] */

@@ -11,6 +11,8 @@ export interface PostListQuery {
   category?: string
   /** 按标签过滤（TEXT[] 包含该标签） */
   tag?: string
+  /** 按作者 ID 过滤（「我的帖子」页用） */
+  authorId?: number
   sort?: 'latest' | 'hot'
   page?: number
   pageSize?: number
@@ -106,6 +108,14 @@ export function usePosts() {
     return res.data.likeCount
   }
 
+  /** 首页侧边栏热门帖子 Top 10 */
+  async function getHotPosts(): Promise<{ id: number; title: string }[]> {
+    const res = await $fetch<ApiResponse<{ id: number; title: string }[]>>(
+      `${apiBase.value}/api/posts/hot`
+    )
+    return res.data
+  }
+
   return {
     posts,
     total,
@@ -119,5 +129,6 @@ export function usePosts() {
     removePost,
     likePost,
     unlikePost,
+    getHotPosts,
   }
 }

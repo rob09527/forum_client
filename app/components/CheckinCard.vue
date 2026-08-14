@@ -1,9 +1,9 @@
 <template>
-  <div class="mx-4 mt-5 pt-4 border-t border-zinc-800">
-    <!-- 标题 + 连续天数 -->
-    <div class="flex items-center justify-between mb-2">
-      <span class="text-xs text-zinc-500">📅 每日签到</span>
-      <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 font-medium">
+  <div class="mx-3 mt-6 p-3 bg-zinc-800 rounded-lg border border-zinc-700/50">
+    <!-- 标题 + 连续天数（窄栏下分两行，避免并排挤在一起错位） -->
+    <div class="mb-2">
+      <div class="text-xs text-zinc-500 mb-1">📅 每日签到</div>
+      <span class="inline-block text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 font-medium">
         🔥 连续 {{ status.streak }} 天
       </span>
     </div>
@@ -56,8 +56,10 @@
 <script setup lang="ts">
 import type { CheckinStatus } from '~/types'
 import { dateKey, monthKey } from '~/utils/date'
+import { extractErrorMessage } from '~/composables/api'
 
 const { isLoggedIn, openLogin, restoreSession } = useAuth()
+const { getStatus, checkin: submitCheckin } = useCheckin()
 const toast = useToast()
 
 // 今天作为静态锚点（组件内固定，避免跨天渲染跳动）
@@ -85,28 +87,11 @@ const week = computed(() => {
   return days
 })
 
-/** 直接调 API 查签到状态（不通过 composable，减少间接层） */
-async function fetchStatus(month?: string): Promise<CheckinStatus> {
-  const res = await $fetch<{ success: boolean; data: CheckinStatus }>('/api/checkin/status', {
-    query: month ? { month } : undefined,
-  })
-  return res.data
-}
-
-/** 直接调 API 执行签到 */
-async function fetchCheckin(): Promise<{ delta: number; streak: number; totalDays: number }> {
-  const res = await $fetch<{ success: boolean; data: { delta: number; streak: number; totalDays: number } }>(
-    '/api/checkin',
-    { method: 'POST' }
-  )
-  return res.data
-}
-
 /** 已登录后拉取状态；跨月时补拉上月日历补全最近 7 天 */
 async function load() {
   if (!isLoggedIn.value) return
   try {
-    const s = await fetchStatus()
+    const s = await getStatus()
     status.value = s
     checkedDates.value = new Set(s.calendar)
 
@@ -114,7 +99,7 @@ async function load() {
     const first = week.value[0]
     if (first && !first.inMonth) {
       const prev = new Date(today.getFullYear(), today.getMonth() - 1, 1)
-      const prevStatus = await fetchStatus(monthKey(prev))
+      const prevStatus = await getStatus(monthKey(prev))
       prevStatus.calendar.forEach((d) => checkedDates.value.add(d))
     }
   } catch {
@@ -139,12 +124,11 @@ async function doCheckin() {
 
   submitting.value = true
   try {
-    const res = await fetchCheckin()
+    const res = await submitCheckin()
     toast.add({ title: `签到成功 +${res.delta} 鸡腿，连续 ${res.streak} 天`, color: 'success' })
     await refreshAfterChange()
   } catch (err: any) {
-    const msg = err?.data?.error?.message || err?.message || '签到失败'
-    toast.add({ title: msg, color: 'error' })
+    toast.add({ title: extractErrorMessage(err, '签到失败'), color: 'error' })
     await load()
   } finally {
     submitting.value = false

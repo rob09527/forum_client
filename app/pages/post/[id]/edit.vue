@@ -24,7 +24,7 @@ import { usePosts } from '~/composables/usePosts'
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
-const { user } = useAuth()
+const { user, isRestoring } = useAuth()
 const { getPost } = usePosts()
 
 const postId = Number(route.params.id)
@@ -38,7 +38,14 @@ const { data: post, error: loadError } = useAsyncData<PostDetail>(
 // 作者校验依赖登录态（客户端恢复 session 后生效）
 const accessError = ref('')
 watchEffect(() => {
-  if (post.value && user.value && user.value.id !== post.value.author.id) {
+  // 客户端 session 恢复完成前先不判，避免把「加载中」误判成「未登录」
+  if (isRestoring.value) return
+  // 未登录：不能看到编辑表单（原逻辑 user.value 为 null 时短路，导致表单泄漏给未登录用户）
+  if (!user.value) {
+    accessError.value = '请先登录后再编辑'
+    return
+  }
+  if (post.value && user.value.id !== post.value.author.id) {
     accessError.value = '只有作者本人可以编辑这篇帖子'
   }
 })

@@ -1,8 +1,8 @@
 import type { User, LoginInput, RegisterInput, AuthResult, ApiResponse } from '~/types'
+import { useApiBase, extractErrorMessage } from './api'
 
 export function useAuth() {
-  const config = useRuntimeConfig()
-  const apiBase = computed(() => import.meta.server ? (config.apiBase as string) : '')
+  const apiBase = useApiBase()
 
   /** 全局 auth 用户状态，跨组件共享（useState 按 key 共享） */
   const authUser = useState<User | null>('auth-user', () => null)
@@ -124,17 +124,4 @@ export function useAuth() {
     closeModal,
     updateUser,
   }
-}
-
-/** 从 fetch 异常中提取用户可读的错误消息 */
-function extractErrorMessage(err: any): string {
-  // Fastify 返回的 JSON 错误
-  if (err?.data?.error?.message) {
-    return err.data.error.message
-  }
-  // 网络错误
-  if (err?.message) {
-    return '网络连接失败，请检查网络后重试'
-  }
-  return '操作失败，请重试'
 }

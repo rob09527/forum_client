@@ -1,5 +1,17 @@
 <template>
   <div class="max-w-3xl mx-auto space-y-4">
+    <!-- 未登录：登录引导（资料接口需登录，与 /my/posts 同策略） -->
+    <div v-if="!isLoggedIn" class="bg-zinc-800 rounded-lg border border-zinc-700/50 p-10 text-center">
+      <p class="text-sm text-zinc-400 mb-4">登录后查看用户资料</p>
+      <button
+        class="px-4 py-1.5 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
+        @click="openLogin"
+      >
+        登录
+      </button>
+    </div>
+
+    <template v-else>
     <!-- 加载中 -->
     <div v-if="pending" class="bg-zinc-800 rounded-lg border border-zinc-700/50 p-10 text-center text-sm text-zinc-500">
       加载中…
@@ -47,9 +59,9 @@
         </div>
 
         <!-- 统计 -->
-        <div class="grid grid-cols-4 gap-3 mt-6">
-          <div class="text-center p-3 rounded-lg bg-zinc-900/60">
-            <div class="text-xl font-bold text-emerald-400">🍗 {{ formatCount(profile.points) }}</div>
+        <div class="grid gap-3 mt-6" :class="isOwnProfile ? 'grid-cols-4' : 'grid-cols-3'">
+          <div v-if="isOwnProfile" class="text-center p-3 rounded-lg bg-zinc-900/60">
+            <div class="text-xl font-bold text-emerald-400">🍗 {{ formatCount(profile.points ?? 0) }}</div>
             <div class="text-[11px] text-zinc-500 mt-1">鸡腿余额</div>
           </div>
           <div class="text-center p-3 rounded-lg bg-zinc-900/60">
@@ -104,20 +116,16 @@
                 >✕</button>
               </div>
               <AvatarPicker
-                :current-style="currentStyle"
-                :username="profile?.username ?? ''"
+                :current-avatar="profile?.avatar ?? ''"
                 @select="handleAvatarSelect"
               />
-              <p class="text-[11px] text-zinc-600 mt-4 text-center">
-                头像由 DiceBear 生成，相同风格 + 用户名 = 相同头像
-              </p>
             </div>
           </div>
         </Transition>
       </Teleport>
 
-      <!-- 积分流水 -->
-      <div class="bg-zinc-800 rounded-lg border border-zinc-700/50 p-6">
+      <!-- 积分流水（仅本人可见） -->
+      <div v-if="isOwnProfile" class="bg-zinc-800 rounded-lg border border-zinc-700/50 p-6">
         <h2 class="text-sm font-medium text-zinc-300 mb-4">🍗 积分流水</h2>
 
         <div v-if="logLoading" class="py-6 text-center text-sm text-zinc-500">流水加载中…</div>
@@ -146,6 +154,7 @@
         </div>
       </div>
     </template>
+    </template>
   </div>
 </template>
 
@@ -154,20 +163,26 @@ import type { PointLogItem, UserProfile } from '~/types'
 import { PointTypeLabel, UserLevelLabel } from '~/types'
 import { formatCount, levelBadgeClassFor } from '~/utils/format'
 import { useUserProfile } from '~/composables/useUserProfile'
+import { extractErrorMessage } from '~/composables/api'
 
 const route = useRoute()
 const toast = useToast()
-const { user, isLoggedIn, updateUser } = useAuth()
+const { user, isLoggedIn, openLogin, updateUser } = useAuth()
 
 const userId = Number(route.params.id)
 
-const { getProfile, getPointsLog } = useUserProfile()
+const { getProfile, getPointsLog, updateAvatar } = useUserProfile()
 
-// ── 资料（SSR 可取，404 时展示不存在） ──
-const { data: profile, pending } = useAsyncData<UserProfile | null>(
+// ── 资料（需登录；SSR 未登录 401 返回 null，登录后重拉） ──
+const { data: profile, pending, refresh: refreshProfile } = useAsyncData<UserProfile | null>(
   `user-profile-${userId}`,
   () => getProfile(userId).catch(() => null)
 )
+
+// 登录态从 null → 有值时重新拉资料
+watch(isLoggedIn, (v) => {
+  if (v) refreshProfile()
+})
 
 // ── 头像选择 ──
 const showAvatarPicker = ref(false)
@@ -176,36 +191,21 @@ const avatarUpdating = ref(false)
 /** 当前用户是否在查看自己的资料 */
 const isOwnProfile = computed(() => isLoggedIn.value && user.value?.id === userId)
 
-/** 从 avatar URL 反推当前 DiceBear 风格（用于预览高亮） */
-const currentStyle = computed(() => {
-  const avatar = profile.value?.avatar
-  if (!avatar) return 'bottts-neutral'
-  // 匹配 DiceBear URL 中的风格段: /9.x/{style}/svg
-  const m = avatar.match(/dicebear\.com\/9\.x\/([^/]+)\/svg/)
-  return m ? m[1] : 'bottts-neutral'
-})
-
-async function handleAvatarSelect(style: string, seedSuffix: string) {
+async function handleAvatarSelect(avatar: string) {
   if (!isLoggedIn.value) return
   avatarUpdating.value = true
   try {
-    const seed = (profile.value?.username ?? '') + seedSuffix
-    const res = await $fetch<{ success: boolean; data: { avatar: string } }>(
-      '/api/user/me/avatar',
-      { method: 'PUT', body: { style, seed } }
-    )
-    if (res.success) {
-      // 更新全局 auth 状态（AppHeader 等会即时响应）
-      updateUser({ avatar: res.data.avatar })
-      // 替换整个 profile 对象触发 useAsyncData ref 的响应式更新
-      if (profile.value) {
-        profile.value = { ...profile.value, avatar: res.data.avatar }
-      }
-      showAvatarPicker.value = false
-      toast.add({ title: '头像已更新', color: 'success' })
+    const newAvatar = await updateAvatar(avatar)
+    // 更新全局 auth 状态（AppHeader 等会即时响应）
+    updateUser({ avatar: newAvatar })
+    // 替换整个 profile 对象触发 useAsyncData ref 的响应式更新
+    if (profile.value) {
+      profile.value = { ...profile.value, avatar: newAvatar }
     }
+    showAvatarPicker.value = false
+    toast.add({ title: '头像已更新', color: 'success' })
   } catch (err: any) {
-    toast.add({ title: err?.data?.error?.message ?? '更新失败', color: 'error' })
+    toast.add({ title: extractErrorMessage(err, '更新失败'), color: 'error' })
   } finally {
     avatarUpdating.value = false
   }
@@ -236,9 +236,10 @@ function handlePageChange(page: number) {
   loadLog(page)
 }
 
-if (import.meta.client) {
-  loadLog(1)
-}
+// 积分流水仅本人可见：登录且是本人时加载
+watch(isOwnProfile, (own) => {
+  if (own) loadLog(1)
+}, { immediate: true })
 
 // ── 展示辅助 ──
 const levelClass = computed(() => levelBadgeClassFor(profile.value?.level))

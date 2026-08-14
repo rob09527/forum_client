@@ -1,5 +1,6 @@
 import type { Category } from '~/types'
 import { mainCategories, subTags } from '~/constants/categories'
+import { useApiBase } from './api'
 
 /**
  * 从后端获取分类和标签数据。
@@ -8,16 +9,14 @@ import { mainCategories, subTags } from '~/constants/categories'
  * 失败时回退到静态常量。
  */
 export function useCategories() {
-  const config = useRuntimeConfig()
-  // SSR 时 $fetch 不经过 Nitro devProxy，需要完整 URL
-  const apiBase = import.meta.server ? config.apiBase as string : ''
+  const apiBase = useApiBase()
 
   const { data: catData } = useAsyncData('forum-categories', () =>
-    $fetch<{ success: boolean; data: Category[] }>(`${apiBase}/api/categories`)
+    $fetch<{ success: boolean; data: Category[] }>(`${apiBase.value}/api/categories`)
   )
 
   const { data: tagData } = useAsyncData('forum-tags', () =>
-    $fetch<{ success: boolean; data: string[] }>(`${apiBase}/api/tags`)
+    $fetch<{ success: boolean; data: string[] }>(`${apiBase.value}/api/tags`)
   )
 
   const categories = computed<Category[]>(() => {

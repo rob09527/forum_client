@@ -1,48 +1,42 @@
 <template>
   <header class="sticky top-0 z-50 bg-zinc-900/95 backdrop-blur-sm border-b border-zinc-700/50 -mx-4 lg:-mx-8 px-4 lg:px-8">
-    <!-- Row 1: Logo + 主分类 + 搜索 + 用户 -->
-    <div class="flex items-center h-12 gap-1">
-      <a href="/" class="text-base font-bold text-blue-400 tracking-tight whitespace-nowrap mr-4">
-        AI Base
+    <!-- Row 1: Logo + 搜索 + 用户 -->
+    <div class="flex items-center h-12">
+      <!-- Logo（占位与左栏同宽，使搜索栏左边缘与帖子列表对齐） -->
+      <a href="/" class="flex items-center gap-2 text-base font-bold tracking-tight whitespace-nowrap flex-shrink-0 lg:w-44">
+        <span class="text-lg leading-none">🤖</span>
+        <span class="text-blue-400">AI Base</span>
       </a>
-      <nav class="flex items-center gap-1 flex-1 overflow-x-auto scrollbar-none">
-        <button
-          v-for="cat in categories"
-          :key="cat.slug"
-          :class="[
-            'px-3 py-1 text-sm rounded-md whitespace-nowrap transition-colors',
-            activeCategory === cat.slug
-              ? 'bg-blue-500/10 text-blue-400 font-medium'
-              : 'text-zinc-400 hover:text-zinc-300 hover:bg-zinc-700/50'
-          ]"
-          @click="$emit('select-category', cat.slug)"
-        >
-          {{ cat.icon }} {{ cat.name }}
-        </button>
-      </nav>
 
-      <!-- 搜索 -->
-      <div class="relative ml-4 flex-shrink-0">
+      <!-- 搜索（左对齐帖子列表后，再整体右移 5%） -->
+      <div class="relative flex-1 max-w-md ml-4 lg:ml-[calc(2rem+5%)]">
         <input
           type="text"
-          placeholder="搜索..."
-          class="w-48 h-8 pl-8 pr-3 text-sm bg-zinc-800 border border-zinc-600/50 rounded-md
-                 text-zinc-300 placeholder-zinc-500 focus:outline-none focus:border-blue-500/50
-                 transition-colors"
+          placeholder="搜索帖子、用户…"
+          class="w-full h-8 pl-8 pr-3 text-sm bg-zinc-800 border border-zinc-600/50 rounded-md
+                 text-zinc-300 placeholder-zinc-500 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20
+                 transition-all"
         />
         <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs">🔍</span>
       </div>
 
-      <!-- 用户区 -->
-      <div class="ml-3 flex-shrink-0 flex items-center gap-2">
-        <!-- 未登录 -->
-        <button
-          v-if="!isLoggedIn"
-          class="px-3 py-1 text-sm text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50 rounded-md transition-colors"
-          @click="openLogin"
-        >
-          登录
-        </button>
+      <!-- 用户区（靠右） -->
+      <div class="ml-auto flex-shrink-0 flex items-center gap-2">
+        <!-- 未登录：登录 + 注册 -->
+        <template v-if="!isLoggedIn">
+          <button
+            class="px-3 py-1 text-sm text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50 rounded-md transition-colors"
+            @click="openLogin"
+          >
+            登录
+          </button>
+          <button
+            class="px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
+            @click="openRegister"
+          >
+            注册
+          </button>
+        </template>
         <!-- 已登录 -->
         <div v-else class="relative" @click="toggleDropdown" @blur="closeDropdown">
           <button class="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-zinc-700/50 transition-colors text-left">
@@ -106,21 +100,16 @@
 </template>
 
 <script setup lang="ts">
-import type { Category } from '~/types'
-
 defineProps<{
-  categories: Category[]
   subTags: string[]
-  activeCategory: string
   activeSubTag: string
 }>()
 
 defineEmits<{
-  'select-category': [slug: string]
   'toggle-sub-tag': [tag: string]
 }>()
 
-const { user, isLoggedIn, logout, openLogin } = useAuth()
+const { user, isLoggedIn, logout, openLogin, openRegister } = useAuth()
 
 const showDropdown = ref(false)
 

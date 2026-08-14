@@ -1,7 +1,9 @@
 <template>
   <div class="py-3">
     <div class="flex gap-3">
-      <Avatar :username="comment.author.username" :avatar="comment.author.avatar" size="md" />
+      <NuxtLink :to="`/user/${comment.author.id}`" class="shrink-0" :title="comment.author.username">
+        <Avatar :username="comment.author.username" :avatar="comment.author.avatar" size="md" />
+      </NuxtLink>
 
       <div class="flex-1 min-w-0">
         <!-- 作者信息行 -->

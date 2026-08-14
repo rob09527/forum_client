@@ -108,26 +108,11 @@
 <script setup lang="ts">
 import type { CheckinStatus } from '~/types'
 import { dateKey, monthKey } from '~/utils/date'
+import { extractErrorMessage } from '~/composables/api'
 
 const { isLoggedIn, openLogin, restoreSession } = useAuth()
+const { getStatus, checkin: submitCheckin } = useCheckin()
 const toast = useToast()
-
-/** 直接调 API 查签到状态 */
-async function fetchStatus(month?: string): Promise<CheckinStatus> {
-  const res = await $fetch<{ success: boolean; data: CheckinStatus }>('/api/checkin/status', {
-    query: month ? { month } : undefined,
-  })
-  return res.data
-}
-
-/** 直接调 API 执行签到 */
-async function fetchCheckin(): Promise<{ delta: number; streak: number; totalDays: number }> {
-  const res = await $fetch<{ success: boolean; data: { delta: number; streak: number; totalDays: number } }>(
-    '/api/checkin',
-    { method: 'POST' }
-  )
-  return res.data
-}
 
 const weekdays = ['一', '二', '三', '四', '五', '六', '日']
 
@@ -201,7 +186,7 @@ async function loadMonth(m: Date) {
   const key = monthKey(m)
   if (monthCache.has(key)) return
   try {
-    const s = await fetchStatus(key)
+    const s = await getStatus(key)
     monthCache.set(key, new Set(s.calendar))
     if (key === monthKey(today)) status.value = s
   } catch {
@@ -225,12 +210,12 @@ async function doCheckin() {
   if (status.value.checkedToday || submitting.value) return
   submitting.value = true
   try {
-    const res = await fetchCheckin()
+    const res = await submitCheckin()
     toast.add({ title: `签到成功 +${res.delta} 鸡腿，连续 ${res.streak} 天`, color: 'success' })
     monthCache.clear() // 状态变了，清缓存重新拉
     await Promise.all([loadMonth(viewMonth.value), restoreSession()])
   } catch (err: any) {
-    toast.add({ title: err?.data?.error?.message || err?.message || '签到失败', color: 'error' })
+    toast.add({ title: extractErrorMessage(err, '签到失败'), color: 'error' })
     monthCache.clear()
     await loadMonth(viewMonth.value)
   } finally {

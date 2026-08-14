@@ -1,5 +1,5 @@
 <template>
-  <aside class="hidden lg:block w-64 flex-shrink-0 border-l border-zinc-700/50 h-[calc(100vh-5.5rem)] sticky top-[5.5rem] overflow-y-auto py-4 px-4 space-y-4">
+  <aside class="hidden lg:block w-80 flex-shrink-0 border-l border-zinc-700/50 h-[calc(100vh-5.5rem)] sticky top-[5.5rem] overflow-y-auto py-4 px-4 space-y-4">
     <!-- ====== 用户卡片：未登录 ====== -->
     <div v-if="!isLoggedIn" class="bg-zinc-800 rounded-lg border border-zinc-700/50 p-5 text-center">
       <div class="w-14 h-14 rounded-full bg-zinc-700 mx-auto mb-3 flex items-center justify-center text-2xl">
@@ -40,8 +40,8 @@
       </button>
     </div>
 
-    <!-- 广告位 1 -->
-    <AdSlot label="广告位" size="300×250" />
+    <!-- 侧边栏广告（position=sidebar，最多 10 条，依次排列在用户卡片下方） -->
+    <AdSlot v-for="ad in sidebarAds" :key="ad.id" :ad="ad" />
 
     <!-- 快捷功能 -->
     <div class="bg-zinc-800 rounded-lg border border-zinc-700/50 p-4 space-y-1">
@@ -52,12 +52,12 @@
       >
         <span>✏️</span> 发布新帖
       </NuxtLink>
-      <button class="flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700/50 rounded-md transition-colors w-full text-left">
-        <span>📋</span> 我的收藏
-      </button>
-      <button class="flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700/50 rounded-md transition-colors w-full text-left">
-        <span>🔔</span> 消息通知
-      </button>
+      <NuxtLink
+        to="/my/posts"
+        class="flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700/50 rounded-md transition-colors w-full text-left"
+      >
+        <span>📝</span> 我的帖子
+      </NuxtLink>
     </div>
 
     <!-- 热门帖子 -->
@@ -76,35 +76,26 @@
       </div>
     </div>
 
-    <!-- 最新回复 -->
-    <div class="bg-zinc-800 rounded-lg border border-zinc-700/50 p-4">
-      <h4 class="text-xs text-zinc-500 font-medium mb-2 px-1">💬 最新回复</h4>
-      <div class="space-y-2">
-        <div v-for="(lr, i) in latestReplies" :key="i" class="flex items-start gap-2 px-2">
-          <Avatar :username="lr.user" size="xs" class="mt-0.5" />
-          <div class="flex-1 min-w-0">
-            <p class="text-xs text-zinc-400 leading-snug line-clamp-1">{{ lr.content }}</p>
-            <p class="text-[10px] text-zinc-500 mt-0.5">{{ lr.user }} · {{ lr.time }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 广告位 2 -->
-    <AdSlot label="广告位" size="300×150" />
+    <!-- 欢迎新用户 -->
+    <WelcomeNewUsers :users="newUsers" />
   </aside>
 </template>
 
 <script setup lang="ts">
 import { UserLevelLabel } from '~/types'
-import type { LatestReply } from '~/types'
+import type { NewUser } from '~/types'
+import { useAdverts } from '~/composables/useAdverts'
 
 defineProps<{
   hotPosts: { id: number; title: string }[]
-  latestReplies: LatestReply[]
+  newUsers: NewUser[]
 }>()
 
 const { user, isLoggedIn, logout, openLogin, openRegister } = useAuth()
+
+// 侧边栏广告（position=sidebar，按 sortOrder 取前 10 条，全部排在用户卡片下方）
+const { adverts } = useAdverts()
+const sidebarAds = computed(() => adverts.value.filter((a) => a.position === 'sidebar').slice(0, 10))
 
 const levelLabel = computed(() => UserLevelLabel[user.value?.level ?? ''] ?? user.value?.level ?? '')
 

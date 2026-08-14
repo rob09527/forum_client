@@ -1,52 +1,58 @@
 <template>
-  <!-- card 变体：侧边栏方形广告 -->
-  <div
-    v-if="variant === 'card'"
-    class="bg-zinc-800 rounded-lg border border-dashed border-zinc-600/50 flex items-center justify-center"
-    :class="adHeightClass"
-  >
-    <div class="text-center">
-      <span class="text-xl block mb-1">📢</span>
-      <span class="text-xs text-zinc-500">{{ label }}</span>
-      <span class="text-[10px] text-zinc-600 block mt-0.5">{{ size }}</span>
-    </div>
-  </div>
+  <!-- 无广告时渲染空（调用方布局自动收起占位空间） -->
+  <template v-if="ad">
+    <!-- 站内链接：SPA 跳转 -->
+    <NuxtLink
+      v-if="ad.link?.startsWith('/')"
+      :to="ad.link"
+      class="block overflow-hidden rounded-lg border border-zinc-700/50 hover:opacity-90 transition-opacity"
+    >
+      <img :src="ad.image" :alt="ad.title ?? '广告'" :class="imgClass" loading="lazy" />
+    </NuxtLink>
 
-  <!-- inline 变体：帖子列表内嵌横幅 -->
-  <div v-else class="px-6 py-4 bg-zinc-800/30">
-    <div class="flex items-center gap-4">
-      <div
-        class="flex-1 bg-zinc-800 rounded-lg border border-dashed border-zinc-600/50 flex items-center justify-center"
-        :class="adHeightClass"
-      >
-        <div class="text-center">
-          <span class="text-sm block mb-1">📢</span>
-          <span class="text-xs text-zinc-500">{{ label }}</span>
-          <span class="text-[10px] text-zinc-600 block mt-0.5">{{ size }}</span>
-        </div>
-      </div>
+    <!-- 外链：新开标签页 -->
+    <a
+      v-else-if="ad.link"
+      :href="externalHref(ad.link)"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="block overflow-hidden rounded-lg border border-zinc-700/50 hover:opacity-90 transition-opacity"
+    >
+      <img :src="ad.image" :alt="ad.title ?? '广告'" :class="imgClass" loading="lazy" />
+    </a>
+
+    <!-- 无链接：纯展示 -->
+    <div v-else class="overflow-hidden rounded-lg border border-zinc-700/50">
+      <img :src="ad.image" :alt="ad.title ?? '广告'" :class="imgClass" loading="lazy" />
     </div>
-  </div>
+  </template>
 </template>
 
 <script setup lang="ts">
-const props = withDefaults(defineProps<{
-  label?: string
-  size?: string
-  variant?: 'card' | 'inline'
-}>(), {
-  label: '广告位',
-  size: '300×250',
-  variant: 'card',
+import type { Advert } from '~/types'
+
+const props = defineProps<{
+  ad?: Advert | null
+}>()
+
+/**
+ * 各广告位对图片的尺寸约束：
+ * 列表内嵌用固定高度 + object-cover 裁剪，避免超宽/超高图撑破布局；
+ * 侧边栏自适应（w-full h-auto，由运营按比例上传）。
+ */
+const imgClass = computed(() => {
+  switch (props.ad?.position) {
+    case 'inline':
+      return 'w-full h-20 sm:h-24 object-cover'
+    default:
+      return 'w-full h-auto'
+  }
 })
 
-/** 根据 size 标签映射到对应高度 */
-const adHeightClass = computed(() => {
-  const heightMap: Record<string, string> = {
-    '300×250': 'h-40',
-    '300×150': 'h-32',
-    '728×90': 'h-20',
-  }
-  return heightMap[props.size] || 'h-32'
-})
+/** 外链补全协议（同公告栏：无协议的裸域名自动补 https://） */
+function externalHref(link: string): string {
+  const trimmed = link.trim()
+  if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith('//')) return trimmed
+  return `https://${trimmed}`
+}
 </script>
