@@ -12,6 +12,11 @@ export default defineNuxtConfig({
   runtimeConfig: {
     // 仅在服务端可用
     apiBase: 'http://localhost:3001',
+    // 公开运行时配置（客户端可用，可用 NUXT_PUBLIC_TELEGRAM_BOT_USERNAME 环境变量覆盖）
+    public: {
+      // Telegram Login Widget 的 bot username（公开值，非 secret）
+      telegramBotUsername: 'forum_test_7132_bot',
+    },
   },
 
   nitro: {

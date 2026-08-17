@@ -1,4 +1,4 @@
-import type { User, LoginInput, RegisterInput, AuthResult, ApiResponse } from '~/types'
+import type { User, LoginInput, RegisterInput, TelegramAuthInput, AuthResult, ApiResponse } from '~/types'
 import { useApiBase, extractErrorMessage } from './api'
 
 export function useAuth() {
@@ -74,6 +74,27 @@ export function useAuth() {
     }
   }
 
+  /** Telegram 登录/注册（合一），验签在后端完成 */
+  async function telegramLogin(data: TelegramAuthInput): Promise<string | null> {
+    isLoading.value = true
+    try {
+      const res = await $fetch<ApiResponse<AuthResult>>(
+        `${apiBase.value}/api/auth/telegram`,
+        { method: 'POST', body: data }
+      )
+      if (res.success) {
+        authUser.value = res.data.user
+        showAuthModal.value = false
+        return null
+      }
+      return '登录失败，请重试'
+    } catch (err: any) {
+      return extractErrorMessage(err)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   /** 退出登录 */
   async function logout(): Promise<void> {
     try {
@@ -117,6 +138,7 @@ export function useAuth() {
     authModalTab,
     login,
     register,
+    telegramLogin,
     logout,
     restoreSession,
     openLogin,

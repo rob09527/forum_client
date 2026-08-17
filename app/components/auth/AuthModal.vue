@@ -215,14 +215,9 @@
               <div class="flex-1 h-px bg-zinc-800" />
             </div>
 
-            <button
-              class="w-full h-11 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30
-                     text-sky-400 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-              @click="handleTelegramLogin"
-            >
-              <span class="text-lg">✈️</span>
-              Telegram 一键登录
-            </button>
+            <!-- Telegram Login Widget 容器（脚本加载后在此渲染官方登录按钮） -->
+            <div ref="telegramContainer" class="w-full flex justify-center" />
+            <p v-if="telegramError" class="text-xs text-red-400 text-center">{{ telegramError }}</p>
           </div>
         </div>
       </div>
@@ -231,11 +226,14 @@
 </template>
 
 <script setup lang="ts">
+import type { TelegramAuthInput } from '~/types'
+
 const {
   showAuthModal,
   authModalTab: tab,
   login: doLogin,
   register: doRegister,
+  telegramLogin,
   isLoading,
   closeModal,
 } = useAuth()
@@ -327,10 +325,39 @@ async function handleRegister() {
   if (err) registerError.value = err
 }
 
-function handleTelegramLogin() {
-  // TODO: 接入 Telegram Login Widget
-  closeModal()
+// ── Telegram Login Widget ──
+const telegramContainer = ref<HTMLElement | null>(null)
+const telegramError = ref('')
+const { telegramBotUsername } = useRuntimeConfig().public
+
+function loadTelegramWidget() {
+  if (import.meta.server) return
+  // 全局回调：Telegram widget 授权后把 user 对象回传（data-onauth 调用 window.onTelegramAuth）
+  ;(window as any).onTelegramAuth = (user: TelegramAuthInput) => handleTelegramAuth(user)
+  // 脚本在页面生命周期内只注入一次
+  if ((window as any).__telegramWidgetLoaded) return
+  ;(window as any).__telegramWidgetLoaded = true
+
+  const script = document.createElement('script')
+  script.async = true
+  script.src = 'https://telegram.org/js/telegram-widget.js?22'
+  script.setAttribute('data-telegram-login', telegramBotUsername)
+  script.setAttribute('data-size', 'large')
+  script.setAttribute('data-userpic', 'false')
+  script.setAttribute('data-onauth', 'onTelegramAuth(user)')
+  telegramContainer.value?.appendChild(script)
 }
+
+async function handleTelegramAuth(user: TelegramAuthInput) {
+  telegramError.value = ''
+  const err = await telegramLogin(user)
+  if (err) telegramError.value = err
+}
+
+// 弹窗打开时加载 widget
+watch(showAuthModal, (open) => {
+  if (open) nextTick(loadTelegramWidget)
+})
 
 // 弹窗打开时聚焦
 watch(showAuthModal, (open) => {

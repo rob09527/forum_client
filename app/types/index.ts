@@ -164,6 +164,17 @@ export interface RegisterInput {
   password: string
 }
 
+/** Telegram Login Widget 回调数据（snake_case，与后端 TelegramAuthData 对齐） */
+export interface TelegramAuthInput {
+  id: number
+  first_name: string
+  last_name?: string
+  username?: string
+  photo_url?: string
+  auth_date: number
+  hash: string
+}
+
 /** auth API 响应 */
 export interface AuthResult {
   user: User
