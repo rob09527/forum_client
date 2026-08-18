@@ -11,11 +11,13 @@
       <!-- 搜索（左对齐帖子列表后，再整体右移 5%） -->
       <div class="relative flex-1 max-w-md ml-4 lg:ml-[calc(2rem+5%)]">
         <input
+          v-model="searchText"
           type="text"
           placeholder="搜索帖子、用户…"
           class="w-full h-8 pl-8 pr-3 text-sm bg-zinc-800 border border-zinc-600/50 rounded-md
                  text-zinc-300 placeholder-zinc-500 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20
                  transition-all"
+          @keyup.enter="handleSearch"
         />
         <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs">🔍</span>
       </div>
@@ -112,6 +114,15 @@ defineEmits<{
 const { user, isLoggedIn, logout, openLogin, openRegister } = useAuth()
 
 const showDropdown = ref(false)
+
+// 顶栏搜索：回车跳转 /search?q=…（当前仅搜索帖子，占位文案保留）
+const searchText = ref('')
+
+function handleSearch() {
+  const q = searchText.value.trim()
+  if (!q) return
+  navigateTo({ path: '/search', query: { q } })
+}
 
 function toggleDropdown() {
   showDropdown.value = !showDropdown.value
