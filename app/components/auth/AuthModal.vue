@@ -334,9 +334,6 @@ function loadTelegramWidget() {
   if (import.meta.server) return
   // 全局回调：Telegram widget 授权后把 user 对象回传（data-onauth 调用 window.onTelegramAuth）
   ;(window as any).onTelegramAuth = (user: TelegramAuthInput) => handleTelegramAuth(user)
-  // 脚本在页面生命周期内只注入一次
-  if ((window as any).__telegramWidgetLoaded) return
-  ;(window as any).__telegramWidgetLoaded = true
 
   const script = document.createElement('script')
   script.async = true
