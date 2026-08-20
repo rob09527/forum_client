@@ -8,7 +8,7 @@
       <div class="flex-1 min-w-0">
         <!-- 作者信息行 -->
         <div class="flex items-center gap-2 flex-wrap">
-          <span class="text-sm text-zinc-200 font-medium">{{ comment.author.username }}</span>
+          <span class="text-sm text-zinc-800 font-medium">{{ comment.author.username }}</span>
           <span class="text-[10px] px-1.5 py-0.5 rounded font-medium" :class="levelBadgeClass">
             {{ levelLabel }}
           </span>
@@ -17,14 +17,14 @@
         </div>
 
         <!-- 正文 -->
-        <div class="mt-1.5 text-sm text-zinc-300 markdown-body" v-html="renderMarkdown(comment.content)"></div>
+        <div class="mt-1.5 text-sm text-zinc-700 markdown-body" v-html="renderMarkdown(comment.content)"></div>
 
         <!-- 编辑框 -->
         <div v-if="editing" class="mt-2">
           <textarea
             v-model="editContent"
             rows="3"
-            class="w-full bg-zinc-900 border border-zinc-700/60 rounded-md px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-blue-500/60 resize-y"
+            class="w-full bg-white border border-zinc-200 rounded-md px-3 py-2 text-sm text-zinc-800 focus:outline-none focus:border-blue-500/60 resize-y"
           ></textarea>
           <div class="flex gap-2 mt-1.5">
             <button
@@ -34,27 +34,27 @@
             >
               {{ editSubmitting ? '保存中…' : '保存' }}
             </button>
-            <button class="text-xs px-3 py-1 text-zinc-400 hover:text-zinc-200" @click="editing = false">取消</button>
+            <button class="text-xs px-3 py-1 text-zinc-600 hover:text-zinc-900" @click="editing = false">取消</button>
           </div>
         </div>
 
         <!-- 操作行 -->
         <div class="flex items-center gap-4 mt-2">
           <button
-            class="text-xs text-zinc-500 hover:text-blue-400 transition-colors"
+            class="text-xs text-zinc-500 hover:text-blue-700 transition-colors"
             :disabled="liking"
             @click="toggleLike"
           >
-            👍 {{ comment.likeCount }}
+            👍 {{ likeCount }}
           </button>
-          <button class="text-xs text-zinc-500 hover:text-zinc-200 transition-colors" @click="startReply">
+          <button class="text-xs text-zinc-500 hover:text-zinc-900 transition-colors" @click="startReply">
             💬 回复
           </button>
           <template v-if="isAuthor">
-            <button class="text-xs text-zinc-500 hover:text-zinc-200 transition-colors" @click="startEdit">
+            <button class="text-xs text-zinc-500 hover:text-zinc-900 transition-colors" @click="startEdit">
               ✏️ 编辑
             </button>
-            <button class="text-xs text-zinc-500 hover:text-red-400 transition-colors" @click="remove">
+            <button class="text-xs text-zinc-500 hover:text-red-600 transition-colors" @click="remove">
               🗑 删除
             </button>
           </template>
@@ -66,7 +66,7 @@
             v-model="replyContent"
             rows="2"
             placeholder="回复 {{ comment.author.username }}…"
-            class="w-full bg-zinc-900 border border-zinc-700/60 rounded-md px-3 py-2 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-blue-500/60 resize-y"
+            class="w-full bg-white border border-zinc-200 rounded-md px-3 py-2 text-sm text-zinc-800 placeholder-zinc-600 focus:outline-none focus:border-blue-500/60 resize-y"
           ></textarea>
           <div class="flex gap-2 mt-1.5">
             <button
@@ -76,14 +76,14 @@
             >
               {{ replySubmitting ? '发送中…' : '发送' }}
             </button>
-            <button class="text-xs px-3 py-1 text-zinc-400 hover:text-zinc-200" @click="replying = false">取消</button>
+            <button class="text-xs px-3 py-1 text-zinc-600 hover:text-zinc-900" @click="replying = false">取消</button>
           </div>
         </div>
       </div>
     </div>
 
     <!-- 楼中楼回复列表（递归渲染） -->
-    <div v-if="replies.length" class="ml-12 mt-2 pl-4 border-l border-zinc-700/50 space-y-2">
+    <div v-if="replies.length" class="ml-12 mt-2 pl-4 border-l border-zinc-200 space-y-2">
       <CommentItem
         v-for="r in replies"
         :key="r.id"
@@ -114,8 +114,12 @@ const { createComment, updateComment, removeComment, likeComment } = useComments
 const toast = useToast()
 
 // 后端只返回两级树：顶层楼层的 replies 是 CommentItem（无嵌套 replies）。
-// 递归渲染时统一用 ?? [] 兜底。
-const replies = computed<CommentTreeItem[]>(() => (props.comment as any).replies ?? [])
+// replies 字段可选，递归渲染时统一用 ?? [] 兜底。
+const replies = computed<CommentTreeItem[]>(() => props.comment.replies ?? [])
+
+// 本地点赞数展示：props 只读不可直接改写，点赞成功后更新本地 ref 回显（父级刷新时再同步）
+const likeCount = ref(props.comment.likeCount)
+watch(() => props.comment.likeCount, (v) => { likeCount.value = v })
 
 const isAuthor = computed(() => !!user.value && user.value.id === props.comment.author.id)
 
@@ -134,7 +138,7 @@ async function toggleLike() {
   liking.value = true
   try {
     const count = await likeComment(props.comment.id)
-    ;(props.comment as any).likeCount = count
+    likeCount.value = count
   } catch (err: any) {
     toast.add({ title: extractErrorMessage(err, '操作失败'), color: 'error' })
   } finally {

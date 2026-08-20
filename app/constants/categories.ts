@@ -564,15 +564,15 @@ export const sortOptions: SortOption[] = [
 
 /** 分类 slug → 颜色映射 */
 export const categoryBadgeMap: Record<string, string> = {
-  'general': 'bg-zinc-700 text-zinc-400',
-  'llm': 'bg-blue-500/20 text-blue-400',
-  'agent': 'bg-purple-500/20 text-purple-400',
-  'prompt': 'bg-emerald-500/20 text-emerald-400',
-  'art': 'bg-pink-500/20 text-pink-400',
-  'opensource': 'bg-amber-500/20 text-amber-400',
-  'tools': 'bg-cyan-500/20 text-cyan-400',
-  'paper': 'bg-indigo-500/20 text-indigo-400',
-  'share': 'bg-rose-500/20 text-rose-400',
+  'general': 'bg-zinc-200 text-zinc-600',
+  'llm': 'bg-blue-500/20 text-blue-600',
+  'agent': 'bg-purple-500/20 text-purple-600',
+  'prompt': 'bg-emerald-500/20 text-emerald-600',
+  'art': 'bg-pink-500/20 text-pink-600',
+  'opensource': 'bg-amber-500/20 text-amber-600',
+  'tools': 'bg-cyan-500/20 text-cyan-600',
+  'paper': 'bg-indigo-500/20 text-indigo-600',
+  'share': 'bg-rose-500/20 text-rose-600',
 }
 
 /** slug → 展示名映射，从 mainCategories 派生 */
@@ -587,5 +587,5 @@ export function categoryName(slug: string): string {
 
 /** 根据分类 slug 获取颜色类（后端 category 字段存的是 slug） */
 export function categoryBadge(slug: string): string {
-  return categoryBadgeMap[slug] || 'bg-zinc-700 text-zinc-400'
+  return categoryBadgeMap[slug] || 'bg-zinc-200 text-zinc-600'
 }

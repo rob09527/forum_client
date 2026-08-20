@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180">
+  <!-- 蜂巢花案（冷灰蓝线性六边形 + 节点圆点），呼应 Logo 六边形语义；
+       低对比、克制不张扬，作浅色背景平铺装饰（视觉方向 A 冷白蜂巢，§7.12） -->
+  <g fill="none" stroke="#ccd8e6" stroke-width="1">
+    <polygon points="90,30 145,62 145,118 90,150 35,118 35,62"/>
+    <polygon points="90,62 124,82 124,122 90,142 56,122 56,82" stroke-opacity="0.55"/>
+  </g>
+  <g fill="#b8c8db">
+    <circle cx="90" cy="30" r="2.4"/>
+    <circle cx="145" cy="62" r="2.4"/>
+    <circle cx="145" cy="118" r="2.4"/>
+    <circle cx="90" cy="150" r="2.4"/>
+    <circle cx="35" cy="118" r="2.4"/>
+    <circle cx="35" cy="62" r="2.4"/>
+    <circle cx="90" cy="90" r="3.2"/>
+  </g>
+</svg>

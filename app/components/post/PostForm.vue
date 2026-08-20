@@ -1,17 +1,17 @@
 <template>
-  <div class="bg-zinc-800 rounded-lg border border-zinc-700/50 p-6">
-    <h1 class="text-lg font-semibold text-zinc-100 mb-5">{{ isEdit ? '编辑帖子' : '发布新帖' }}</h1>
+  <div class="panel p-6">
+    <h1 class="text-lg font-semibold text-zinc-900 mb-5">{{ isEdit ? '编辑帖子' : '发布新帖' }}</h1>
 
     <div class="space-y-5">
       <!-- 标题 -->
       <div>
-        <label class="block text-sm text-zinc-400 mb-1.5">标题</label>
+        <label class="block text-sm text-zinc-600 mb-1.5">标题</label>
         <input
           v-model="title"
           type="text"
           maxlength="200"
           placeholder="一句话说清楚你要分享的内容"
-          class="w-full bg-zinc-900 border border-zinc-700/60 rounded-md px-3 py-2 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30"
+          class="w-full bg-white border border-zinc-200 rounded-md px-3 py-2 text-sm text-zinc-800 placeholder-zinc-600 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30"
         />
         <p class="text-xs text-zinc-600 mt-1 text-right">{{ title.length }}/200</p>
       </div>
@@ -19,33 +19,34 @@
       <!-- 板块 + 标签 -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div>
-          <label class="block text-sm text-zinc-400 mb-1.5">板块</label>
+          <label class="block text-sm text-zinc-600 mb-1.5">板块</label>
           <select
             v-model="category"
-            class="w-full bg-zinc-900 border border-zinc-700/60 rounded-md px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-blue-500/60"
+            class="w-full bg-white border border-zinc-200 rounded-md px-3 py-2 text-sm text-zinc-800 focus:outline-none focus:border-blue-500/60"
           >
             <option disabled value="">请选择板块</option>
+            <!-- 原生 option 无法渲染 SVG 图标，只显示板块名 -->
             <option v-for="c in categories" :key="c.slug" :value="c.slug">
-              {{ c.icon }} {{ c.name }}
+              {{ c.name }}
             </option>
           </select>
         </div>
 
         <!-- 标签（系统自动推荐，点击添加） -->
         <div>
-          <label class="block text-sm text-zinc-400 mb-1.5">标签（最多 5 个，点击推荐添加）</label>
-          <div class="flex flex-wrap items-center gap-1.5 bg-zinc-900 border border-zinc-700/60 rounded-md px-2 py-1.5 min-h-[2.4rem]">
+          <label class="block text-sm text-zinc-600 mb-1.5">标签（最多 5 个，点击推荐添加）</label>
+          <div class="flex flex-wrap items-center gap-1.5 bg-white border border-zinc-200 rounded-md px-2 py-1.5 min-h-[2.4rem]">
             <span
               v-for="tag in tags"
               :key="tag"
-              class="inline-flex items-center gap-1 bg-blue-500/15 text-blue-400 text-xs px-2 py-0.5 rounded"
+              class="inline-flex items-center gap-1 bg-blue-500/15 text-blue-600 text-xs px-2 py-0.5 rounded"
             >
               {{ tag }}
-              <button type="button" class="hover:text-blue-200" @click="removeTag(tag)">×</button>
+              <button type="button" class="hover:text-blue-500" @click="removeTag(tag)">×</button>
             </span>
             <span v-if="tags.length === 0" class="text-xs text-zinc-600">撰写正文后自动推荐标签</span>
           </div>
-          <p v-if="tags.length >= 5" class="text-xs text-amber-400/80 mt-1">最多 5 个标签</p>
+          <p v-if="tags.length >= 5" class="text-xs text-amber-600/80 mt-1">最多 5 个标签</p>
           <!-- 推荐标签：标题+正文自动匹配，点击即添加 -->
           <div v-if="tagRecommendations.length > 0" class="flex items-center gap-1.5 mt-1.5 flex-wrap">
             <span class="text-[11px] text-zinc-600">推荐：</span>
@@ -53,7 +54,7 @@
               v-for="r in tagRecommendations"
               :key="r"
               type="button"
-              class="text-xs px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 hover:bg-blue-500/15 hover:text-blue-400 border border-zinc-700/50 hover:border-blue-500/30 transition-colors"
+              class="text-xs px-2 py-0.5 rounded-full bg-white text-zinc-600 hover:bg-blue-500/15 hover:text-blue-700 border border-zinc-200 hover:border-blue-500/30 transition-colors"
               @click="addRecommendation(r)"
             >
               {{ r }}
@@ -65,11 +66,11 @@
       <!-- 正文 -->
       <div>
         <div class="flex items-center justify-between mb-1.5">
-          <label class="text-sm text-zinc-400">正文（支持 Markdown）</label>
+          <label class="text-sm text-zinc-600">正文（支持 Markdown）</label>
           <div class="flex items-center gap-2">
             <button
               type="button"
-              class="text-xs px-2.5 py-1 rounded bg-zinc-700/60 hover:bg-zinc-600/60 text-zinc-300 transition-colors"
+              class="text-xs px-2.5 py-1 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition-colors"
               :disabled="uploading"
               @click="triggerUpload"
             >
@@ -77,7 +78,7 @@
             </button>
             <button
               type="button"
-              class="text-xs px-2.5 py-1 rounded bg-zinc-700/60 hover:bg-zinc-600/60 text-zinc-300 transition-colors"
+              class="text-xs px-2.5 py-1 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition-colors"
               @click="preview = !preview"
             >
               {{ preview ? '编辑' : '👁 预览' }}
@@ -92,13 +93,13 @@
           v-model="content"
           rows="14"
           placeholder="分享你的内容，支持 Markdown 语法、图片…"
-          class="w-full bg-zinc-900 border border-zinc-700/60 rounded-md px-3 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-blue-500/60 font-mono resize-y"
+          class="w-full bg-white border border-zinc-200 rounded-md px-3 py-2.5 text-sm text-zinc-800 placeholder-zinc-600 focus:outline-none focus:border-blue-500/60 font-mono resize-y"
         ></textarea>
 
         <!-- 预览 -->
         <div
           v-else
-          class="w-full bg-zinc-900 border border-zinc-700/60 rounded-md px-4 py-3 text-sm text-zinc-300 min-h-[16rem] markdown-body"
+          class="w-full bg-white border border-zinc-200 rounded-md px-4 py-3 text-sm text-zinc-700 min-h-[16rem] markdown-body"
           v-html="content ? renderMarkdown(content) : '<span class=text-zinc-600>预览区域</span>'"
         ></div>
 
@@ -108,7 +109,7 @@
       <!-- 错误提示 -->
       <div
         v-if="error"
-        class="text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-md px-3 py-2"
+        class="text-sm text-red-600 bg-red-500/10 border border-red-500/30 rounded-md px-3 py-2"
       >
         ⚠️ {{ error }}
       </div>
@@ -123,7 +124,7 @@
         >
           {{ submitting ? '提交中…' : (isEdit ? '保存修改' : '发布') }}
         </button>
-        <NuxtLink :to="isEdit && post ? `/post/${post.id}` : '/'" class="text-sm text-zinc-400 hover:text-zinc-200">
+        <NuxtLink :to="isEdit && post ? `/post/${post.id}` : '/'" class="text-sm text-zinc-600 hover:text-zinc-900">
           取消
         </NuxtLink>
       </div>

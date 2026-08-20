@@ -1,12 +1,11 @@
 <template>
-  <div class="min-h-screen bg-zinc-900 text-zinc-200 font-sans px-4 lg:pl-[10vw] lg:pr-4 pb-8">
-    <AppHeader
-      :sub-tags="headerTags"
-      :active-sub-tag="activeSubTag"
-      @toggle-sub-tag="handleToggleSubTag"
-    />
+  <!-- 外层不再盖 bg-white，透出 body 的全景背景图（含遮罩）。
+       导航栏独立于内容区外全宽 sticky，内容区自持 padding 对齐 -->
+  <div class="min-h-screen text-zinc-800 font-sans">
+    <AppHeader />
 
-    <div class="flex">
+    <div class="px-4 lg:pl-[10vw] lg:pr-4 pb-8">
+      <div class="flex">
       <LeftSidebar
         :categories="categories"
         :active-category="activeCategory"
@@ -15,20 +14,21 @@
 
       <!-- 中间内容区：公告 + 页面 slot（帖子列表）。max-w 封顶固定横截面，
            左右各留明显间隙（ml-8/mr-8），不再与两侧边栏贴线 -->
-      <main class="flex-1 min-w-0 lg:ml-8 lg:mr-8 lg:max-w-[40.95rem]">
-        <!-- 公告栏：单条轮播（多条时自动滚动切到下一条） -->
+      <main class="flex-1 min-w-0 lg:ml-8 lg:mr-8 lg:max-w-[40.95rem] space-y-4 pt-8">
+        <!-- 公告栏：单条轮播（多条时自动滚动切到下一条），独立小卡与列表容器间留间距 -->
         <div
           v-if="currentAnnouncement"
-          class="flex items-center gap-3 px-6 py-2.5 border-b border-zinc-700/50 bg-zinc-900/80 text-xs"
+          class="panel flex items-center gap-3 px-6 py-2.5 text-xs"
         >
-          <span class="text-amber-400 font-medium flex-shrink-0">📢 公告</span>
+          <!-- 二轮整改：喇叭图标与“公告”文字留出间距 -->
+          <span class="text-amber-600 font-medium flex-shrink-0"><span class="mr-1">📢</span>公告</span>
           <div class="flex-1 min-w-0 h-5 overflow-hidden">
             <Transition name="announce" mode="out-in">
               <NuxtLink
                 v-if="currentAnnouncement.link?.startsWith('/')"
                 :key="currentAnnouncement.id"
                 :to="currentAnnouncement.link"
-                class="block truncate leading-5 text-zinc-400 hover:text-zinc-300 transition-colors"
+                class="block truncate leading-5 text-zinc-600 hover:text-zinc-900 transition-colors"
               >
                 <span :class="['mr-1.5', ANNOUNCEMENT_DOT_COLOR[currentAnnouncement.type]]">●</span>{{ currentAnnouncement.title }}
               </NuxtLink>
@@ -38,11 +38,11 @@
                 :href="externalHref(currentAnnouncement.link)"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="block truncate leading-5 text-zinc-400 hover:text-zinc-300 transition-colors"
+                class="block truncate leading-5 text-zinc-600 hover:text-zinc-900 transition-colors"
               >
                 <span :class="['mr-1.5', ANNOUNCEMENT_DOT_COLOR[currentAnnouncement.type]]">●</span>{{ currentAnnouncement.title }}
               </a>
-              <span v-else :key="currentAnnouncement.id" class="block truncate leading-5 text-zinc-400">
+              <span v-else :key="currentAnnouncement.id" class="block truncate leading-5 text-zinc-600">
                 <span :class="['mr-1.5', ANNOUNCEMENT_DOT_COLOR[currentAnnouncement.type]]">●</span>{{ currentAnnouncement.title }}
               </span>
             </Transition>
@@ -58,10 +58,11 @@
       />
     </div>
 
-    <!-- 登录/注册弹窗 -->
-    <AuthModal />
-  </div>
-</template>
+        <!-- 登录/注册弹窗 -->
+        <AuthModal />
+      </div>
+    </div>
+  </template>
 
 <script setup lang="ts">
 import { ANNOUNCEMENT_DOT_COLOR } from '~/types'
@@ -71,31 +72,15 @@ import { useAnnouncements } from '~/composables/useAnnouncements'
 const route = useRoute()
 const router = useRouter()
 
-const { categories, tags } = useCategories()
+const { categories } = useCategories()
 const { restoreSession } = useAuth()
 const { getHotPosts } = usePosts()
 const { getLatestUsers } = useUserProfile()
 const { getAnnouncements } = useAnnouncements()
 
-// 当前板块 / 子标签由 URL 驱动：/?category=llm、/?tag=xxx；无参默认全部（general）
-// 这样任何页面点板块/标签都会先跳回首页列表，且支持分享链接、浏览器前进后退。
+// 当前板块由 URL 驱动：/?category=llm；无参默认全部（general）
+// 这样任何页面点板块都会先跳回首页列表，且支持分享链接、浏览器前进后退。
 const activeCategory = computed(() => (route.query.category as string) || 'general')
-const activeSubTag = computed(() => (route.query.tag as string) || '')
-
-/** 从全量标签池随机抽 5 个展示在 Header，每次导航到首页时重新洗牌 */
-const headerTags = ref<string[]>([])
-function shuffleHeaderTags() {
-  if (tags.value.length <= 5) {
-    headerTags.value = [...tags.value]
-    return
-  }
-  // 洗牌后取前 5（用于 UI 展示，不需要密码学级别的均匀分布）
-  headerTags.value = [...tags.value].sort(() => Math.random() - 0.5).slice(0, 5)
-}
-// 路由变化时重新洗牌（同一路由不会重复触发）
-watch(() => route.fullPath, shuffleHeaderTags)
-// 客户端首次挂载时洗牌
-onMounted(() => { if (headerTags.value.length === 0) shuffleHeaderTags() })
 
 // 公告数据（SSR 拉取，上线公告按 sortOrder 倒序）
 const { data: announcements } = useAsyncData<Announcement[]>(
@@ -117,13 +102,14 @@ function externalHref(link: string): string {
   if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith('//')) return trimmed
   return `https://${trimmed}`
 }
+const ANNOUNCE_INTERVAL_MS = 4000
 let announceTimer: ReturnType<typeof setInterval> | undefined
 function startAnnounceTicker() {
   stopAnnounceTicker()
   if (announcements.value.length <= 1) return
   announceTimer = setInterval(() => {
     currentIndex.value = (currentIndex.value + 1) % announcements.value.length
-  }, 4000)
+  }, ANNOUNCE_INTERVAL_MS)
 }
 function stopAnnounceTicker() {
   if (announceTimer) clearInterval(announceTimer)
@@ -165,14 +151,6 @@ function handleSelectCategory(slug: string) {
   if (slug === 'general') delete query.category
   else query.category = slug
   delete query.tag // 切换板块时清掉子标签，避免筛选叠加
-  router.push({ path: '/', query })
-}
-
-/** 点击子标签：切换 on/off */
-function handleToggleSubTag(tag: string) {
-  const query = { ...route.query } as Record<string, string>
-  if (tag) query.tag = tag
-  else delete query.tag
   router.push({ path: '/', query })
 }
 </script>

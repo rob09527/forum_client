@@ -1,15 +1,15 @@
 <template>
-  <div class="bg-zinc-900 border border-zinc-700/50 rounded-lg overflow-hidden">
+  <div class="panel overflow-hidden">
     <!-- 搜索框 + 板块筛选 -->
-    <div class="px-6 py-4 border-b border-zinc-700/50">
+    <div class="px-6 py-4 border-b border-zinc-200">
       <div class="flex gap-3">
         <div class="relative flex-1">
           <input
             v-model="keyword"
             type="text"
             placeholder="搜索帖子…"
-            class="w-full h-9 pl-9 pr-3 text-sm bg-zinc-800 border border-zinc-600/50 rounded-md
-                   text-zinc-300 placeholder-zinc-500 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20
+            class="w-full h-9 pl-9 pr-3 text-sm bg-white border border-zinc-200 rounded-md
+                   text-zinc-700 placeholder-zinc-500 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20
                    transition-all"
             @keyup.enter="submitSearch"
           />
@@ -17,16 +17,17 @@
         </div>
         <select
           v-model="category"
-          class="h-9 px-3 text-sm bg-zinc-800 border border-zinc-600/50 rounded-md text-zinc-300
+          class="h-9 px-3 text-sm bg-white border border-zinc-200 rounded-md text-zinc-700
                  focus:outline-none focus:border-blue-500/50 cursor-pointer"
         >
           <option value="">全部板块</option>
-          <option v-for="c in categories" :key="c.slug" :value="c.slug">{{ c.icon }} {{ c.name }}</option>
+          <!-- 原生 option 无法渲染 SVG 图标，只显示板块名 -->
+          <option v-for="c in categories" :key="c.slug" :value="c.slug">{{ c.name }}</option>
         </select>
       </div>
       <!-- 命中统计 -->
       <p v-if="keywordText" class="mt-3 text-xs text-zinc-500">
-        搜索「<span class="text-zinc-400">{{ keywordText }}</span>」：共 {{ total }} 条结果
+        搜索「<span class="text-zinc-600">{{ keywordText }}</span>」：共 {{ total }} 条结果
       </p>
     </div>
 
@@ -45,18 +46,24 @@
       {{ errorMessage }}
     </div>
 
-    <!-- 空结果 -->
-    <div v-else-if="results.length === 0" class="px-6 py-12 text-center text-sm text-zinc-500">
-      未找到与「{{ keywordText }}」相关的内容
+    <!-- 空结果（配手账风插画，视觉AI出图 §5 #4） -->
+    <div v-else-if="results.length === 0" class="px-6 py-10 text-center">
+      <img
+        :src="'/images/empty-state.webp'"
+        alt="未找到相关内容"
+        class="w-44 mx-auto mb-4 rounded-lg"
+        loading="lazy"
+      />
+      <p class="text-sm text-zinc-500">未找到与「{{ keywordText }}」相关的内容</p>
     </div>
 
     <!-- 结果列表 -->
-    <div v-else class="divide-y divide-zinc-800">
+    <div v-else class="divide-y divide-zinc-200">
       <PostItem v-for="post in results" :key="post.id" :post="post" />
     </div>
 
     <!-- 分页 -->
-    <div v-if="totalPages > 1" class="flex items-center justify-center py-3 border-t border-zinc-700/50">
+    <div v-if="totalPages > 1" class="flex items-center justify-center py-3 border-t border-zinc-200">
       <Pagination
         :current-page="page"
         :total-pages="totalPages"
@@ -72,7 +79,7 @@ import { useSearch } from '~/composables/useSearch'
 import { useCategories } from '~/composables/useCategories'
 
 const route = useRoute()
-const { results, total, totalPages, loading, error: searchError, search } = useSearch()
+const { results, total, totalPages, error: searchError, search } = useSearch()
 const { categories } = useCategories()
 
 // URL 驱动：q + category 放 query（可分享/可刷新），page 用本地 ref
@@ -87,7 +94,11 @@ const category = computed<string>({
   },
 })
 
+// 输入框内容：初始取自 URL，URL 变化（后退/分享链接/浏览器前进）时同步回来
 const keyword = ref(keywordText.value)
+watch(keywordText, (v) => {
+  keyword.value = v
+})
 const page = ref(1)
 
 // 切换关键词/板块时回到第一页（先于 useAsyncData 的 watcher，避免多拉一次错误页码）
@@ -97,7 +108,7 @@ watch([keywordText, category], () => {
 
 // SSR 时也执行并等待数据返回；参数变化自动重新拉取。
 // 未输入关键词时返回空分页（而非 undefined），避免触发 useAsyncData 重复请求警告。
-const { pending, error: dataError } = useAsyncData(
+const { data, pending, error: dataError } = useAsyncData(
   'search-result',
   () => {
     if (!keywordText.value) {
@@ -113,6 +124,15 @@ const { pending, error: dataError } = useAsyncData(
   },
   { watch: [keywordText, category, page] }
 )
+
+// 客户端 hydration 时 payload 命中 → useAsyncData 不再执行 handler，
+// 但 composable 内的 results/total/totalPages 副作用 ref 已重置为空 →
+// 从返回值同步回来，避免首屏「空结果」闪烁/误判
+watch(data, (v) => {
+  results.value = v?.items ?? []
+  total.value = v?.total ?? 0
+  totalPages.value = v?.totalPages ?? 0
+}, { immediate: true })
 
 function submitSearch() {
   const q = keyword.value.trim()

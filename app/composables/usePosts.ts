@@ -40,8 +40,12 @@ export function usePosts() {
   const loading = ref(false)
   const error = ref('')
 
-  /** 加载帖子列表（分页由服务端处理） */
-  async function loadPosts(query: PostListQuery = {}): Promise<void> {
+  /**
+   * 加载帖子列表（分页由服务端处理）。
+   * 返回分页数据（失败返回 null，错误写入 error ref）——
+   * 供 useAsyncData 序列化到 payload，避免 SSR + CSR 双请求。
+   */
+  async function loadPosts(query: PostListQuery = {}): Promise<Paginated<PostListItem> | null> {
     loading.value = true
     error.value = ''
     try {
@@ -52,8 +56,10 @@ export function usePosts() {
       posts.value = res.data.items
       total.value = res.data.total
       totalPages.value = res.data.totalPages
+      return res.data
     } catch (err: any) {
       error.value = extractErrorMessage(err, '加载帖子失败')
+      return null
     } finally {
       loading.value = false
     }

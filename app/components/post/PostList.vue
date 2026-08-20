@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- 排序 + 分页（顶上） -->
-    <div class="flex items-center justify-between px-6 py-3 border-b border-zinc-700/50 bg-zinc-900/80">
+    <div class="flex items-center justify-between px-6 py-3 border-b border-zinc-200 bg-zinc-50">
       <div class="flex items-center gap-1">
         <button
           v-for="s in sortOptions"
@@ -9,8 +9,8 @@
           :class="[
             'px-3 py-1 text-xs rounded-md transition-colors',
             sortBy === s.value
-              ? 'bg-zinc-700 text-zinc-200'
-              : 'text-zinc-400 hover:text-zinc-300'
+              ? 'bg-zinc-200 text-zinc-800'
+              : 'text-zinc-600 hover:text-zinc-900'
           ]"
           @click="selectSort(s.value)"
         >
@@ -34,13 +34,19 @@
       {{ error }}
     </div>
 
-    <!-- 空列表 -->
-    <div v-else-if="posts.length === 0" class="px-6 py-12 text-center text-sm text-zinc-500">
-      暂无帖子
+    <!-- 空列表（配手账风插画，视觉AI出图 §5 #4） -->
+    <div v-else-if="posts.length === 0" class="px-6 py-10 text-center">
+      <img
+        :src="'/images/empty-state.webp'"
+        alt="暂无帖子"
+        class="w-48 mx-auto mb-4 rounded-lg"
+        loading="lazy"
+      />
+      <p class="text-sm text-zinc-500">暂无帖子</p>
     </div>
 
     <!-- 帖子列表 -->
-    <div v-else class="divide-y divide-zinc-800">
+    <div v-else class="divide-y divide-zinc-200">
       <template v-for="(post, idx) in posts" :key="post.id">
         <AdSlot v-if="idx === 5 && inlineAd" :ad="inlineAd" />
         <PostItem :post="post" />
@@ -48,7 +54,7 @@
     </div>
 
     <!-- 分页（底部） -->
-    <div class="flex items-center justify-center py-3 border-t border-zinc-700/50">
+    <div class="flex items-center justify-center py-3 border-t border-zinc-200">
       <Pagination
         :current-page="currentPage"
         :total-pages="totalPages"

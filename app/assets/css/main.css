@@ -1,6 +1,12 @@
 @import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
 
+/* Nuxt UI 主题类（toast/toaster 等）生成于 .nuxt/ui/，该目录被 .gitignore 排除，
+   Tailwind 默认不扫描 → toast 卡片样式与定位类缺失，表现为签到成功等 toast
+   以裸黑字渲染在左下角（0×0 视口）。此处显式声明为扫描源（相对路径，避免依赖本机绝对路径）。 */
+@source "../../../.nuxt/ui/toast.ts";
+@source "../../../.nuxt/ui/toaster.ts";
+
 @theme {
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -8,19 +14,65 @@
 
 @layer base {
   body {
-    @apply antialiased bg-zinc-900 text-zinc-300 font-sans;
+    @apply antialiased text-zinc-700 font-sans;
+    /* 视觉方向 A「冷白蜂巢」：冷灰白底 + 顶部淡蓝光晕 + 蜂巢花案平铺。
+       不暖不深、克制的 AI 产品感；花案 SVG 见 public/images/pattern-honeycomb.svg（§7.12） */
+    background-color: #fafbfd;
+    background-image:
+      radial-gradient(circle at 38% 0%, rgba(96, 165, 250, 0.07), transparent 55%),
+      url('/images/pattern-honeycomb.svg');
+    background-size: auto, 180px 180px;
+    background-repeat: no-repeat, repeat;
+    background-position: center top, center;
+    /* 移动端两层均随内容滚动（iOS 不支持 background-attachment: fixed） */
+    background-attachment: scroll, scroll;
+  }
+}
+
+/* 桌面端（≥1024px）：背景光晕固定不随内容滚动，营造深度（花案仍随滚动） */
+@media (min-width: 1024px) {
+  body {
+    background-attachment: fixed, scroll;
   }
 }
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { @apply bg-zinc-700 rounded-full; }
-::-webkit-scrollbar-thumb:hover { @apply bg-zinc-600; }
+::-webkit-scrollbar-thumb { @apply bg-zinc-300 rounded-full; }
+::-webkit-scrollbar-thumb:hover { @apply bg-zinc-400; }
 
 @utility scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
   &::-webkit-scrollbar { display: none; }
+}
+
+/* 卡片融合工具：半透明白(85%) + 贴合/悬浮双层柔光阴影。
+   让冷白背景的蜂巢花案透出、模块"长"在背景上，消除纯白贴纸感；
+   85% 兼顾透叠氛围与浅灰文字的对比度。冷调描边 + 淡蓝柔光阴影（视觉方向 A，§7.12）。 */
+@utility panel {
+  background-color: rgb(255 255 255 / 0.85);
+  border: 1px solid rgb(203 213 225 / 0.6); /* slate-300 60% 冷调 */
+  border-radius: 0.5rem; /* rounded-lg */
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.03), 0 4px 16px rgb(96 165 250 / 0.05);
+}
+
+/* ── Nuxt UI Toast 兜底样式 ──
+   Toast.vue/Toaster.vue 真实渲染 data-slot="viewport/base/title/description"（已验证）。
+   但语义色工具类（bg-default / ring-default / text-highlighted / text-muted）需 Nuxt UI
+   主题插件按语义注入，当前构建管线未生成（编译产物中均不存在，@source 只能补标准工具类如
+   定位类），导致 toast 无底色、仅剩裸黑字。此处显式给出与站点卡片一致的白底 + 细描边 + 柔光阴影。
+   选择器限定在 data-slot="viewport" 下，不会误伤其它组件的 data-slot="base"。 */
+[data-slot="viewport"] [data-slot="base"] {
+  background-color: #ffffff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.02), 0 4px 12px rgb(0 0 0 / 0.03);
+  outline: 1px solid #e4e4e7; /* zinc-200，替代缺失的 ring-default */
+}
+[data-slot="viewport"] [data-slot="title"] {
+  color: #18181b; /* zinc-900，替代缺失的 text-highlighted */
+}
+[data-slot="viewport"] [data-slot="description"] {
+  color: #71717a; /* zinc-500，替代缺失的 text-muted */
 }
 
 /* ── Markdown 渲染样式（帖子正文 / 评论 / 编辑器预览共用） ── */
@@ -33,7 +85,7 @@
 .markdown-body h2,
 .markdown-body h3,
 .markdown-body h4 {
-  @apply text-zinc-100 font-semibold mt-5 mb-3 leading-snug;
+  @apply text-zinc-900 font-semibold mt-5 mb-3 leading-snug;
 }
 .markdown-body h1 { @apply text-xl; }
 .markdown-body h2 { @apply text-lg; }
@@ -41,33 +93,33 @@
 
 .markdown-body p { @apply my-2.5; }
 
-.markdown-body a { @apply text-blue-400 hover:text-blue-300 hover:underline; }
+.markdown-body a { @apply text-blue-600 hover:text-blue-500 hover:underline; }
 
 .markdown-body ul { @apply list-disc pl-6 my-2.5 space-y-1; }
 .markdown-body ol { @apply list-decimal pl-6 my-2.5 space-y-1; }
 .markdown-body li > p { @apply my-1; }
 
 .markdown-body blockquote {
-  @apply border-l-4 border-zinc-600 pl-4 my-3 text-zinc-400 italic;
+  @apply border-l-4 border-zinc-300 pl-4 my-3 text-zinc-600 italic;
 }
 
 .markdown-body code {
-  @apply bg-zinc-700/60 text-pink-400 text-[0.85em] px-1.5 py-0.5 rounded font-mono;
+  @apply bg-zinc-100 text-pink-600 text-[0.85em] px-1.5 py-0.5 rounded font-mono;
 }
 .markdown-body pre {
-  @apply bg-zinc-900 border border-zinc-700/60 rounded-lg p-4 my-3 overflow-x-auto font-mono text-[13px] leading-6;
+  @apply bg-zinc-50 border border-zinc-200 rounded-lg p-4 my-3 overflow-x-auto font-mono text-[13px] leading-6;
 }
 .markdown-body pre code {
-  @apply bg-transparent text-zinc-300 p-0 rounded-none;
+  @apply bg-transparent text-zinc-800 p-0 rounded-none;
 }
 
 .markdown-body img {
   @apply max-w-full rounded-md my-3;
 }
 
-.markdown-body hr { @apply border-zinc-700/60 my-5; }
+.markdown-body hr { @apply border-zinc-200 my-5; }
 
 .markdown-body table { @apply w-full my-3 text-sm border-collapse; }
 .markdown-body th,
-.markdown-body td { @apply border border-zinc-700/60 px-3 py-1.5 text-left; }
-.markdown-body th { @apply bg-zinc-800 text-zinc-200 font-medium; }
+.markdown-body td { @apply border border-zinc-200 px-3 py-1.5 text-left; }
+.markdown-body th { @apply bg-zinc-50 text-zinc-900 font-medium; }

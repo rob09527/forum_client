@@ -11,7 +11,9 @@ export function useAuth() {
 
   const isLoggedIn = computed(() => authUser.value !== null)
   const isLoading = ref(false)
-  const isRestoring = ref(true) // 初始 session 恢复中
+  // 初始 session 恢复中。用 useState 共享：default.vue 的 restoreSession 完成后，
+  // 所有 useAuth() 实例（edit.vue / new.vue 等）都能感知恢复结束，不会各自卡在恢复态
+  const isRestoring = useState<boolean>('auth-restoring', () => true)
 
   /**
    * 恢复登录状态——应用启动时调用一次。

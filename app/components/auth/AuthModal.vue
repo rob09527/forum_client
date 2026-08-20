@@ -10,11 +10,14 @@
         <!-- 遮罩 -->
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
-        <!-- 弹窗主体 -->
-        <div class="relative bg-zinc-900 border border-zinc-700/50 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+        <!-- 弹窗主体（极淡装饰底铺氛围，白色遮罩控透明度，视觉AI出图 §5 #6） -->
+        <div
+          class="relative bg-white border border-zinc-200 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden"
+          style="background-image: linear-gradient(rgba(255,255,255,0.78), rgba(255,255,255,0.78)), url('/images/auth-decor.webp'); background-size: cover; background-position: center;"
+        >
           <!-- Logo -->
           <div class="text-center pt-8 pb-2">
-            <span class="text-2xl font-bold text-blue-400 tracking-tight">AI Base</span>
+            <span class="text-2xl font-bold text-blue-600 tracking-tight">AI Base</span>
             <p class="text-xs text-zinc-500 mt-1">AI 开发者的中文社区</p>
           </div>
 
@@ -24,8 +27,8 @@
               :class="[
                 'flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors',
                 tab === 'login'
-                  ? 'border-blue-500 text-blue-400'
-                  : 'border-transparent text-zinc-500 hover:text-zinc-400'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-zinc-500 hover:text-zinc-600'
               ]"
               @click="switchTab('login')"
             >
@@ -35,8 +38,8 @@
               :class="[
                 'flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors',
                 tab === 'register'
-                  ? 'border-blue-500 text-blue-400'
-                  : 'border-transparent text-zinc-500 hover:text-zinc-400'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-zinc-500 hover:text-zinc-600'
               ]"
               @click="switchTab('register')"
             >
@@ -57,14 +60,14 @@
                     type="email"
                     autocomplete="email"
                     placeholder="your@email.com"
-                    class="w-full h-10 px-3.5 text-sm bg-zinc-800 border rounded-lg text-zinc-200 placeholder-zinc-600
+                    class="w-full h-10 px-3.5 text-sm bg-white border rounded-lg text-zinc-800 placeholder-zinc-600
                            focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
-                    :class="loginErrors.email ? 'border-red-500/50' : 'border-zinc-700/50'"
+                    :class="loginErrors.email ? 'border-red-500/50' : 'border-zinc-200'"
                     @blur="validateLoginEmail"
                     @input="loginErrors.email = ''"
                     @keydown.enter="handleLogin"
                   />
-                  <p v-if="loginErrors.email" class="text-xs text-red-400 mt-1 ml-0.5">{{ loginErrors.email }}</p>
+                  <p v-if="loginErrors.email" class="text-xs text-red-600 mt-1 ml-0.5">{{ loginErrors.email }}</p>
                 </div>
                 <div>
                   <label class="block text-xs text-zinc-500 mb-1.5 ml-0.5">密码</label>
@@ -74,29 +77,29 @@
                       :type="showLoginPwd ? 'text' : 'password'"
                       autocomplete="current-password"
                       placeholder="输入密码"
-                      class="w-full h-10 px-3.5 pr-10 text-sm bg-zinc-800 border rounded-lg text-zinc-200 placeholder-zinc-600
+                      class="w-full h-10 px-3.5 pr-10 text-sm bg-white border rounded-lg text-zinc-800 placeholder-zinc-600
                              focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
-                      :class="loginErrors.password ? 'border-red-500/50' : 'border-zinc-700/50'"
+                      :class="loginErrors.password ? 'border-red-500/50' : 'border-zinc-200'"
                       @blur="validateLoginPassword"
                       @input="loginErrors.password = ''"
                       @keydown.enter="handleLogin"
                     />
                     <button
                       type="button"
-                      class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-400 text-sm transition-colors"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-700 text-sm transition-colors"
                       @click="showLoginPwd = !showLoginPwd"
                     >
                       {{ showLoginPwd ? '🙈' : '👁' }}
                     </button>
                   </div>
-                  <p v-if="loginErrors.password" class="text-xs text-red-400 mt-1 ml-0.5">{{ loginErrors.password }}</p>
+                  <p v-if="loginErrors.password" class="text-xs text-red-600 mt-1 ml-0.5">{{ loginErrors.password }}</p>
                 </div>
               </div>
 
               <!-- 错误信息 -->
               <div
                 v-if="loginError"
-                class="flex items-center gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5"
+                class="flex items-center gap-2 text-xs text-red-600 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5"
               >
                 <span class="flex-shrink-0">⚠️</span>
                 <span>{{ loginError }}</span>
@@ -115,7 +118,7 @@
 
               <p class="text-center text-xs text-zinc-500">
                 还没有账号？
-                <button class="text-blue-400 hover:text-blue-300 transition-colors" @click="switchTab('register')">立即注册</button>
+                <button class="text-blue-600 hover:text-blue-500 transition-colors" @click="switchTab('register')">立即注册</button>
               </p>
             </template>
 
@@ -130,14 +133,14 @@
                     type="text"
                     autocomplete="username"
                     placeholder="3-20 个字符"
-                    class="w-full h-10 px-3.5 text-sm bg-zinc-800 border rounded-lg text-zinc-200 placeholder-zinc-600
+                    class="w-full h-10 px-3.5 text-sm bg-white border rounded-lg text-zinc-800 placeholder-zinc-600
                            focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
-                    :class="registerErrors.username ? 'border-red-500/50' : 'border-zinc-700/50'"
+                    :class="registerErrors.username ? 'border-red-500/50' : 'border-zinc-200'"
                     @blur="validateRegisterUsername"
                     @input="registerErrors.username = ''"
                     @keydown.enter="handleRegister"
                   />
-                  <p v-if="registerErrors.username" class="text-xs text-red-400 mt-1 ml-0.5">{{ registerErrors.username }}</p>
+                  <p v-if="registerErrors.username" class="text-xs text-red-600 mt-1 ml-0.5">{{ registerErrors.username }}</p>
                 </div>
                 <div>
                   <label class="block text-xs text-zinc-500 mb-1.5 ml-0.5">邮箱</label>
@@ -146,14 +149,14 @@
                     type="email"
                     autocomplete="email"
                     placeholder="your@email.com"
-                    class="w-full h-10 px-3.5 text-sm bg-zinc-800 border rounded-lg text-zinc-200 placeholder-zinc-600
+                    class="w-full h-10 px-3.5 text-sm bg-white border rounded-lg text-zinc-800 placeholder-zinc-600
                            focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
-                    :class="registerErrors.email ? 'border-red-500/50' : 'border-zinc-700/50'"
+                    :class="registerErrors.email ? 'border-red-500/50' : 'border-zinc-200'"
                     @blur="validateRegisterEmail"
                     @input="registerErrors.email = ''"
                     @keydown.enter="handleRegister"
                   />
-                  <p v-if="registerErrors.email" class="text-xs text-red-400 mt-1 ml-0.5">{{ registerErrors.email }}</p>
+                  <p v-if="registerErrors.email" class="text-xs text-red-600 mt-1 ml-0.5">{{ registerErrors.email }}</p>
                 </div>
                 <div>
                   <label class="block text-xs text-zinc-500 mb-1.5 ml-0.5">密码</label>
@@ -163,29 +166,29 @@
                       :type="showRegisterPwd ? 'text' : 'password'"
                       autocomplete="new-password"
                       placeholder="至少 8 个字符"
-                      class="w-full h-10 px-3.5 pr-10 text-sm bg-zinc-800 border rounded-lg text-zinc-200 placeholder-zinc-600
+                      class="w-full h-10 px-3.5 pr-10 text-sm bg-white border rounded-lg text-zinc-800 placeholder-zinc-600
                              focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
-                      :class="registerErrors.password ? 'border-red-500/50' : 'border-zinc-700/50'"
+                      :class="registerErrors.password ? 'border-red-500/50' : 'border-zinc-200'"
                       @blur="validateRegisterPassword"
                       @input="registerErrors.password = ''"
                       @keydown.enter="handleRegister"
                     />
                     <button
                       type="button"
-                      class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-400 text-sm transition-colors"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-700 text-sm transition-colors"
                       @click="showRegisterPwd = !showRegisterPwd"
                     >
                       {{ showRegisterPwd ? '🙈' : '👁' }}
                     </button>
                   </div>
-                  <p v-if="registerErrors.password" class="text-xs text-red-400 mt-1 ml-0.5">{{ registerErrors.password }}</p>
+                  <p v-if="registerErrors.password" class="text-xs text-red-600 mt-1 ml-0.5">{{ registerErrors.password }}</p>
                 </div>
               </div>
 
               <!-- 错误信息 -->
               <div
                 v-if="registerError"
-                class="flex items-center gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5"
+                class="flex items-center gap-2 text-xs text-red-600 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5"
               >
                 <span class="flex-shrink-0">⚠️</span>
                 <span>{{ registerError }}</span>
@@ -204,20 +207,20 @@
 
               <p class="text-center text-xs text-zinc-500">
                 已有账号？
-                <button class="text-blue-400 hover:text-blue-300 transition-colors" @click="switchTab('login')">立即登录</button>
+                <button class="text-blue-600 hover:text-blue-500 transition-colors" @click="switchTab('login')">立即登录</button>
               </p>
             </template>
 
             <!-- Telegram 登录分隔线 -->
             <div class="flex items-center gap-3">
-              <div class="flex-1 h-px bg-zinc-800" />
+              <div class="flex-1 h-px bg-white" />
               <span class="text-xs text-zinc-600">或</span>
-              <div class="flex-1 h-px bg-zinc-800" />
+              <div class="flex-1 h-px bg-white" />
             </div>
 
             <!-- Telegram Login Widget 容器（脚本加载后在此渲染官方登录按钮） -->
             <div ref="telegramContainer" class="w-full flex justify-center" />
-            <p v-if="telegramError" class="text-xs text-red-400 text-center">{{ telegramError }}</p>
+            <p v-if="telegramError" class="text-xs text-red-600 text-center">{{ telegramError }}</p>
           </div>
         </div>
       </div>

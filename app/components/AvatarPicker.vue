@@ -1,6 +1,6 @@
 <template>
   <div>
-    <p class="text-sm text-zinc-400 mb-3">
+    <p class="text-sm text-zinc-600 mb-3">
       选择本地头像（{{ styles.length }} 个风格 × {{ AVATARS_PER_STYLE }} 个）
     </p>
 
@@ -12,13 +12,13 @@
         class="flex flex-col items-center gap-1 p-2 rounded-lg transition-all border-2"
         :class="expandedStyle === s.id
           ? 'border-blue-500 bg-blue-500/10'
-          : 'border-zinc-700/50 bg-zinc-800 hover:border-zinc-600'"
+          : 'border-zinc-200 bg-white hover:border-zinc-200'"
         @click="expandedStyle = s.id"
       >
-        <div class="w-12 h-12 rounded-full overflow-hidden bg-zinc-700 flex-shrink-0">
+        <div class="w-12 h-12 rounded-full overflow-hidden bg-zinc-200 flex-shrink-0">
           <img :src="localAvatarPath(s.id, 1)" :alt="s.label" class="w-full h-full" loading="lazy" />
         </div>
-        <span class="text-[10px] text-zinc-400 leading-tight text-center">{{ s.icon }} {{ s.label }}</span>
+        <span class="text-[10px] text-zinc-600 leading-tight text-center">{{ s.icon }} {{ s.label }}</span>
       </button>
     </div>
 
@@ -30,7 +30,7 @@
         class="rounded-lg transition-all border-2"
         :class="isSelected(expandedStyle, n)
           ? 'border-blue-500 bg-blue-500/10'
-          : 'border-zinc-700/50 bg-zinc-800 hover:border-zinc-600'"
+          : 'border-zinc-200 bg-white hover:border-zinc-200'"
         @click="$emit('select', localAvatarPath(expandedStyle, n))"
       >
         <img

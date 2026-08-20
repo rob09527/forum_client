@@ -1,6 +1,6 @@
 <template>
   <div
-    :class="[sizeClass, 'relative inline-flex flex-shrink-0 rounded-full overflow-hidden bg-zinc-700']"
+    :class="[sizeClass, 'relative inline-flex flex-shrink-0 rounded-full overflow-hidden bg-zinc-200']"
     :title="alt || username || ''"
   >
     <!-- 首字母回退：始终渲染，图片加载成功后透明 -->
@@ -59,7 +59,7 @@ const textSizeMap: Record<string, string> = {
 }
 
 const sizeClass = computed(() => sizeMap[props.size])
-const fallbackTextClass = computed(() => `${textSizeMap[props.size]} text-zinc-400`)
+const fallbackTextClass = computed(() => `${textSizeMap[props.size]} text-zinc-600`)
 
 // 权威风格清单（后端下发），未就绪时为空数组，getAvatarUrl 内部兜底为单一风格
 const { data: avatarStyles } = useAvatarStyles()

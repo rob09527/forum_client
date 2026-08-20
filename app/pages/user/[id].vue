@@ -1,8 +1,8 @@
 <template>
   <div class="max-w-3xl mx-auto space-y-4">
     <!-- 未登录：登录引导（资料接口需登录，与 /my/posts 同策略） -->
-    <div v-if="!isLoggedIn" class="bg-zinc-800 rounded-lg border border-zinc-700/50 p-10 text-center">
-      <p class="text-sm text-zinc-400 mb-4">登录后查看用户资料</p>
+    <div v-if="!isLoggedIn" class="panel p-10 text-center">
+      <p class="text-sm text-zinc-600 mb-4">登录后查看用户资料</p>
       <button
         class="px-4 py-1.5 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
         @click="openLogin"
@@ -13,19 +13,19 @@
 
     <template v-else>
     <!-- 加载中 -->
-    <div v-if="pending" class="bg-zinc-800 rounded-lg border border-zinc-700/50 p-10 text-center text-sm text-zinc-500">
+    <div v-if="pending" class="panel p-10 text-center text-sm text-zinc-500">
       加载中…
     </div>
 
     <!-- 用户不存在 -->
-    <div v-else-if="!profile" class="bg-zinc-800 rounded-lg border border-zinc-700/50 p-10 text-center">
-      <p class="text-zinc-400 text-sm mb-3">用户不存在</p>
-      <NuxtLink to="/" class="text-sm text-blue-400 hover:text-blue-300">返回首页</NuxtLink>
+    <div v-else-if="!profile" class="panel p-10 text-center">
+      <p class="text-zinc-600 text-sm mb-3">用户不存在</p>
+      <NuxtLink to="/" class="text-sm text-blue-600 hover:text-blue-500">返回首页</NuxtLink>
     </div>
 
     <template v-else>
       <!-- 用户信息卡 -->
-      <div class="bg-zinc-800 rounded-lg border border-zinc-700/50 p-6">
+      <div class="panel p-6">
         <div class="flex items-start gap-4">
           <div class="flex flex-col items-center gap-2">
             <button
@@ -43,51 +43,51 @@
           </div>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 flex-wrap">
-              <span class="text-lg font-semibold text-zinc-100">{{ profile.username }}</span>
+              <span class="text-lg font-semibold text-zinc-900">{{ profile.username }}</span>
               <span class="text-[11px] px-2 py-0.5 rounded font-medium" :class="levelClass">
                 {{ levelLabel }}
               </span>
-              <span v-if="profile.stars > 0" class="text-[11px] px-2 py-0.5 rounded bg-yellow-500/15 text-yellow-400 font-medium">
+              <span v-if="profile.stars > 0" class="text-[11px] px-2 py-0.5 rounded bg-yellow-500/15 text-yellow-600 font-medium">
                 ⭐ {{ profile.stars }}
               </span>
             </div>
             <div class="text-xs text-zinc-500 mt-1">
               注册于 {{ joinedDate }}
             </div>
-            <p v-if="profile.bio" class="text-sm text-zinc-400 mt-3 leading-relaxed">{{ profile.bio }}</p>
+            <p v-if="profile.bio" class="text-sm text-zinc-600 mt-3 leading-relaxed">{{ profile.bio }}</p>
           </div>
         </div>
 
         <!-- 统计 -->
         <div class="grid gap-3 mt-6" :class="isOwnProfile ? 'grid-cols-4' : 'grid-cols-3'">
-          <div v-if="isOwnProfile" class="text-center p-3 rounded-lg bg-zinc-900/60">
-            <div class="text-xl font-bold text-emerald-400">🍗 {{ formatCount(profile.points ?? 0) }}</div>
+          <div v-if="isOwnProfile" class="text-center p-3 rounded-lg bg-zinc-100">
+            <div class="text-xl font-bold text-emerald-600">🍗 {{ formatCount(profile.points ?? 0) }}</div>
             <div class="text-[11px] text-zinc-500 mt-1">鸡腿余额</div>
           </div>
-          <div class="text-center p-3 rounded-lg bg-zinc-900/60">
-            <div class="text-xl font-bold text-zinc-200">{{ formatCount(profile.totalPointsEarned) }}</div>
+          <div class="text-center p-3 rounded-lg bg-zinc-100">
+            <div class="text-xl font-bold text-zinc-800">{{ formatCount(profile.totalPointsEarned) }}</div>
             <div class="text-[11px] text-zinc-500 mt-1">累计获得</div>
           </div>
-          <div class="text-center p-3 rounded-lg bg-zinc-900/60">
-            <div class="text-xl font-bold text-zinc-200">{{ formatCount(profile.postCount) }}</div>
+          <div class="text-center p-3 rounded-lg bg-zinc-100">
+            <div class="text-xl font-bold text-zinc-800">{{ formatCount(profile.postCount) }}</div>
             <div class="text-[11px] text-zinc-500 mt-1">发帖</div>
           </div>
-          <div class="text-center p-3 rounded-lg bg-zinc-900/60">
-            <div class="text-xl font-bold text-zinc-200">{{ formatCount(profile.commentCount) }}</div>
+          <div class="text-center p-3 rounded-lg bg-zinc-100">
+            <div class="text-xl font-bold text-zinc-800">{{ formatCount(profile.commentCount) }}</div>
             <div class="text-[11px] text-zinc-500 mt-1">评论</div>
           </div>
         </div>
 
         <!-- 等级进度条 -->
-        <div class="mt-5 pt-4 border-t border-zinc-700/50">
+        <div class="mt-5 pt-4 border-t border-zinc-200">
           <div class="flex items-center justify-between text-xs text-zinc-500 mb-2">
-            <span>等级进度 <span class="text-zinc-300">{{ levelLabel }}</span></span>
+            <span>等级进度 <span class="text-zinc-700">{{ levelLabel }}</span></span>
             <span v-if="profile.levelProgress.nextLevelAt !== null">
-              还差 <span class="text-amber-400 font-medium">{{ profile.levelProgress.remaining }}</span> 鸡腿升 {{ nextLevelLabel }}
+              还差 <span class="text-amber-600 font-medium">{{ profile.levelProgress.remaining }}</span> 鸡腿升 {{ nextLevelLabel }}
             </span>
-            <span v-else class="text-emerald-400">已满级</span>
+            <span v-else class="text-emerald-600">已满级</span>
           </div>
-          <div class="h-2 rounded-full bg-zinc-900 overflow-hidden">
+          <div class="h-2 rounded-full bg-white overflow-hidden">
             <div
               class="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-400 transition-all"
               :style="{ width: levelPercent + '%' }"
@@ -107,11 +107,11 @@
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
             @click.self="showAvatarPicker = false"
           >
-            <div class="bg-zinc-800 border border-zinc-700/50 rounded-xl p-6 w-full max-w-lg mx-4 shadow-2xl">
+            <div class="bg-white border border-zinc-200 rounded-xl p-6 w-full max-w-lg mx-4 shadow-2xl">
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-base font-semibold text-zinc-200">更换头像</h3>
+                <h3 class="text-base font-semibold text-zinc-800">更换头像</h3>
                 <button
-                  class="text-zinc-500 hover:text-zinc-300 transition-colors text-lg leading-none"
+                  class="text-zinc-500 hover:text-zinc-900 transition-colors text-lg leading-none"
                   @click="showAvatarPicker = false"
                 >✕</button>
               </div>
@@ -125,24 +125,24 @@
       </Teleport>
 
       <!-- 积分流水（仅本人可见） -->
-      <div v-if="isOwnProfile" class="bg-zinc-800 rounded-lg border border-zinc-700/50 p-6">
-        <h2 class="text-sm font-medium text-zinc-300 mb-4">🍗 积分流水</h2>
+      <div v-if="isOwnProfile" class="panel p-6">
+        <h2 class="text-sm font-medium text-zinc-700 mb-4">🍗 积分流水</h2>
 
         <div v-if="logLoading" class="py-6 text-center text-sm text-zinc-500">流水加载中…</div>
         <div v-else-if="logItems.length === 0" class="py-8 text-center text-sm text-zinc-600">
           还没有积分记录，去签到 / 发帖 / 评论赚鸡腿吧～
         </div>
-        <div v-else class="divide-y divide-zinc-700/50">
+        <div v-else class="divide-y divide-zinc-200/50">
           <div v-for="item in logItems" :key="item.id" class="flex items-center justify-between py-3">
             <div>
-              <div class="text-sm text-zinc-300">
+              <div class="text-sm text-zinc-700">
                 {{ pointTypeLabel(item.type) }}
                 <span v-if="item.refId" class="text-zinc-600 text-xs ml-1">#{{ item.refId }}</span>
               </div>
               <div class="text-[11px] text-zinc-600 mt-0.5">{{ logTime(item.createdAt) }}</div>
             </div>
             <div class="text-right">
-              <span class="text-emerald-400 font-medium text-sm">+{{ item.delta }}</span>
+              <span class="text-emerald-600 font-medium text-sm">+{{ item.delta }}</span>
               <div class="text-[11px] text-zinc-600 mt-0.5">余额 {{ item.balanceAfter }}</div>
             </div>
           </div>
@@ -170,30 +170,31 @@ const toast = useToast()
 const { user, isLoggedIn, openLogin, updateUser } = useAuth()
 
 const userId = Number(route.params.id)
+// 非法/越界 id 直接视为不存在，避免向 /api/users/NaN 发无效请求
+const userIdValid = Number.isInteger(userId) && userId > 0
 
 const { getProfile, getPointsLog, updateAvatar } = useUserProfile()
 
 // ── 资料（需登录；SSR 未登录 401 返回 null，登录后重拉） ──
 const { data: profile, pending, refresh: refreshProfile } = useAsyncData<UserProfile | null>(
   `user-profile-${userId}`,
-  () => getProfile(userId).catch(() => null)
+  () => (userIdValid ? getProfile(userId).catch(() => null) : Promise.resolve(null))
 )
 
-// 登录态从 null → 有值时重新拉资料
+// 登录态从 null → 有值时重新拉资料。
+// 仅在资料尚未加载成功时补拉（SSR 未登录 401 后登录成功），已有数据时跳过避免重复请求
 watch(isLoggedIn, (v) => {
-  if (v) refreshProfile()
+  if (v && !profile.value) refreshProfile()
 })
 
 // ── 头像选择 ──
 const showAvatarPicker = ref(false)
-const avatarUpdating = ref(false)
 
 /** 当前用户是否在查看自己的资料 */
 const isOwnProfile = computed(() => isLoggedIn.value && user.value?.id === userId)
 
 async function handleAvatarSelect(avatar: string) {
   if (!isLoggedIn.value) return
-  avatarUpdating.value = true
   try {
     const newAvatar = await updateAvatar(avatar)
     // 更新全局 auth 状态（AppHeader 等会即时响应）
@@ -206,8 +207,6 @@ async function handleAvatarSelect(avatar: string) {
     toast.add({ title: '头像已更新', color: 'success' })
   } catch (err: any) {
     toast.add({ title: extractErrorMessage(err, '更新失败'), color: 'error' })
-  } finally {
-    avatarUpdating.value = false
   }
 }
 

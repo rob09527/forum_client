@@ -1,55 +1,82 @@
 <template>
-  <div class="mx-3 mt-6 p-3 bg-zinc-800 rounded-lg border border-zinc-700/50">
-    <!-- 标题 + 连续天数（窄栏下分两行，避免并排挤在一起错位） -->
-    <div class="mb-2">
-      <div class="text-xs text-zinc-500 mb-1">📅 每日签到</div>
-      <span class="inline-block text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 font-medium">
-        🔥 连续 {{ status.streak }} 天
-      </span>
-    </div>
-
-    <!-- 最近 7 天迷你日历 -->
-    <div class="flex justify-between mb-2">
-      <div
-        v-for="d in week"
-        :key="d.date"
-        class="w-6 h-6 flex items-center justify-center text-[10px] rounded-full transition-colors"
-        :class="dayCellClass(d)"
-        :title="d.date"
-      >
-        {{ d.day }}
-      </div>
-    </div>
-
-    <!-- 今日可得 / 已签 -->
-    <div class="text-[11px] text-zinc-500 mb-2">
-      <template v-if="status.checkedToday">
-        今日已签，得 <span class="text-emerald-400 font-medium">+{{ status.todayDelta }}</span> 鸡腿
-      </template>
-      <template v-else>
-        签到可得 <span class="text-emerald-400 font-medium">+{{ status.todayDelta }}</span> 鸡腿
-      </template>
-    </div>
-
-    <!-- 签到按钮（未登录 → 弹登录框） -->
+  <div class="mx-3 mt-6 p-3 panel">
+    <!-- 可收起标题行：默认展开完整签到卡，点击标题行可收起（减负，不占侧栏空间） -->
     <button
-      class="w-full py-1.5 text-xs rounded-md transition-colors"
-      :class="status.checkedToday
-        ? 'bg-zinc-700/40 text-zinc-500 cursor-default'
-        : 'bg-blue-500 hover:bg-blue-600 text-white'"
-      :disabled="status.checkedToday || submitting"
-      @click="doCheckin"
+      type="button"
+      class="w-full flex items-center justify-between gap-2 group"
+      :aria-expanded="!collapsed"
+      @click="collapsed = !collapsed"
     >
-      {{ submitting ? '签到中…' : status.checkedToday ? '今日已签到 ✓' : '立即签到' }}
+      <span class="text-xs text-zinc-500 transition-colors group-hover:text-zinc-900">📅 每日签到</span>
+      <span class="flex items-center gap-1.5">
+        <span
+          v-if="isLoggedIn"
+          class="inline-block text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 font-medium"
+        >
+          🔥 连续 {{ status.streak }} 天
+        </span>
+        <!-- 展开箭头：收起 ▸ / 展开 ▾（旋转过渡） -->
+        <svg
+          class="w-3.5 h-3.5 text-zinc-400 transition-transform duration-200"
+          :class="collapsed ? '' : 'rotate-90'"
+          viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+        >
+          <path d="M6 4 L10 8 L6 12" />
+        </svg>
+      </span>
     </button>
 
-    <!-- 完整日历入口 -->
-    <NuxtLink
-      to="/checkin"
-      class="block text-center text-[11px] text-zinc-600 hover:text-zinc-400 mt-2 transition-colors"
+    <!-- 可收起内容：grid-rows 0fr→1fr 高度折叠动画 -->
+    <div
+      class="grid transition-all duration-300 ease-in-out"
+      :class="collapsed ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100 mt-3'"
     >
-      完整日历 →
-    </NuxtLink>
+      <div class="overflow-hidden min-h-0">
+        <!-- 最近 7 天迷你日历 -->
+        <div class="flex justify-between mb-2">
+          <div
+            v-for="d in week"
+            :key="d.date"
+            class="w-6 h-6 flex items-center justify-center text-[10px] rounded-full transition-colors"
+            :class="dayCellClass(d)"
+            :title="d.date"
+          >
+            {{ d.day }}
+          </div>
+        </div>
+
+        <!-- 今日可得 / 已签 -->
+        <div class="text-[11px] text-zinc-500 mb-2">
+          <template v-if="status.checkedToday">
+            今日已签，得 <span class="text-emerald-600 font-medium">+{{ status.todayDelta }}</span> 鸡腿
+          </template>
+          <template v-else>
+            签到可得 <span class="text-emerald-600 font-medium">+{{ status.todayDelta }}</span> 鸡腿
+          </template>
+        </div>
+
+        <!-- 签到按钮（未登录 → 弹登录框） -->
+        <button
+          class="w-full py-1.5 text-xs rounded-md transition-colors"
+          :class="status.checkedToday
+            ? 'bg-zinc-100 text-zinc-500 cursor-default'
+            : 'bg-blue-500 hover:bg-blue-600 text-white'"
+          :disabled="status.checkedToday || submitting"
+          @click="doCheckin"
+        >
+          {{ submitting ? '签到中…' : status.checkedToday ? '今日已签到 ✓' : '立即签到' }}
+        </button>
+
+        <!-- 完整日历入口 -->
+        <NuxtLink
+          to="/checkin"
+          class="block text-center text-[11px] text-zinc-600 hover:text-zinc-600 mt-2 transition-colors"
+        >
+          完整日历 →
+        </NuxtLink>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -76,6 +103,8 @@ const status = ref<CheckinStatus>({
 /** 已签日期集合（本月 + 必要时上月），用 Set 加速判定 */
 const checkedDates = ref<Set<string>>(new Set())
 const submitting = ref(false)
+/** 收起状态：默认展开完整签到卡，点击标题行可收起 */
+const collapsed = ref(false)
 
 /** 最近 7 天（今天往前 6 天） */
 const week = computed(() => {
@@ -107,11 +136,11 @@ async function load() {
   }
 }
 
-/** 日期格样式：已签 → 绿色；今天 → 蓝色描边；其余 → 暗色 */
+/** 日期格样式：已签 → 绿色；今天 → 琥珀描边；其余 → 白底 */
 function dayCellClass(d: { date: string; inMonth: boolean }): string {
-  if (checkedDates.value.has(d.date)) return 'bg-emerald-500/20 text-emerald-400'
-  if (d.date === todayKey) return 'bg-blue-500/30 text-blue-300 ring-1 ring-blue-400'
-  return 'bg-zinc-800 text-zinc-600'
+  if (checkedDates.value.has(d.date)) return 'bg-emerald-500/20 text-emerald-600'
+  if (d.date === todayKey) return 'bg-amber-500/25 text-amber-700 ring-1 ring-amber-500/40'
+  return 'bg-white/70 text-zinc-600'
 }
 
 /** 执行签到；成功后刷新状态，并同步全局用户积分余额 */

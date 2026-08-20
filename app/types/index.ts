@@ -45,9 +45,9 @@ export interface CommentItem {
   createdAt: string
 }
 
-/** 帖子评论树：楼层 + 楼中楼回复（递归嵌套） */
+/** 帖子评论树：楼层 + 楼中楼回复（递归嵌套；后端不保证返回 replies 字段，缺省视为无回复） */
 export interface CommentTreeItem extends CommentItem {
-  replies: CommentTreeItem[]
+  replies?: CommentTreeItem[]
 }
 
 /** 后端分页包装（data.items 为列表数据） */
@@ -78,10 +78,10 @@ export type AnnouncementType = 'normal' | 'important' | 'urgent' | 'activity'
 
 /** 公告圆点颜色（按类型映射，替代写死的 dotColor 样式串） */
 export const ANNOUNCEMENT_DOT_COLOR: Record<AnnouncementType, string> = {
-  normal: 'text-zinc-400',
-  important: 'text-blue-400',
-  urgent: 'text-red-400',
-  activity: 'text-emerald-400',
+  normal: 'text-zinc-500',
+  important: 'text-blue-600',
+  urgent: 'text-red-600',
+  activity: 'text-emerald-600',
 }
 
 /** 公告（与后端 AnnouncementPublic 对齐） */

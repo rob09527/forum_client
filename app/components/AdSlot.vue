@@ -5,7 +5,7 @@
     <NuxtLink
       v-if="ad.link?.startsWith('/')"
       :to="ad.link"
-      class="block overflow-hidden rounded-lg border border-zinc-700/50 hover:opacity-90 transition-opacity"
+      class="block overflow-hidden rounded-lg border border-zinc-200 shadow-sm hover:opacity-90 transition-opacity"
     >
       <img :src="ad.image" :alt="ad.title ?? '广告'" :class="imgClass" loading="lazy" />
     </NuxtLink>
@@ -16,13 +16,13 @@
       :href="externalHref(ad.link)"
       target="_blank"
       rel="noopener noreferrer"
-      class="block overflow-hidden rounded-lg border border-zinc-700/50 hover:opacity-90 transition-opacity"
+      class="block overflow-hidden rounded-lg border border-zinc-200 shadow-sm hover:opacity-90 transition-opacity"
     >
       <img :src="ad.image" :alt="ad.title ?? '广告'" :class="imgClass" loading="lazy" />
     </a>
 
     <!-- 无链接：纯展示 -->
-    <div v-else class="overflow-hidden rounded-lg border border-zinc-700/50">
+    <div v-else class="overflow-hidden rounded-lg border border-zinc-200 shadow-sm">
       <img :src="ad.image" :alt="ad.title ?? '广告'" :class="imgClass" loading="lazy" />
     </div>
   </template>

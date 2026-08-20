@@ -2,23 +2,23 @@
   <div class="flex items-center gap-0.5 text-xs font-mono">
     <button
       :disabled="currentPage <= 1"
-      class="px-2 py-1 text-zinc-500 hover:text-zinc-300 disabled:opacity-30 disabled:cursor-default"
+      class="px-2 py-1 text-zinc-500 hover:text-zinc-900 disabled:opacity-30 disabled:cursor-default"
       @click="$emit('page-change', currentPage - 1)"
     >◀</button>
     <button
       v-for="p in visiblePagesComputed"
       :key="p"
       :class="[
-        'w-7 h-7 flex items-center justify-center rounded transition-colors',
+        'w-7 h-7 flex items-center justify-center rounded transition-all',
         p === currentPage
-          ? 'bg-blue-500 text-white'
-          : 'text-zinc-400 hover:text-zinc-300 hover:bg-zinc-700/50'
+          ? 'bg-blue-500/85 text-white shadow-sm'
+          : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 hover:shadow-sm hover:-translate-y-px'
       ]"
       @click="$emit('page-change', p)"
     >{{ p }}</button>
     <button
       :disabled="currentPage >= totalPages"
-      class="px-2 py-1 text-zinc-500 hover:text-zinc-300 disabled:opacity-30 disabled:cursor-default"
+      class="px-2 py-1 text-zinc-500 hover:text-zinc-900 disabled:opacity-30 disabled:cursor-default"
       @click="$emit('page-change', currentPage + 1)"
     >▶</button>
   </div>

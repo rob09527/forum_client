@@ -2,8 +2,8 @@
   <div>
     <!-- 未登录：引导登录。authUser 由布局的 restoreSession 在客户端恢复，
          SSR 和首帧时为 null，故未登录先显示提示（与 AppHeader 登录按钮同策略） -->
-    <div v-if="!isLoggedIn" class="bg-zinc-800 rounded-lg border border-zinc-700/50 p-10 text-center">
-      <p class="text-sm text-zinc-400 mb-4">登录后查看你发布的帖子</p>
+    <div v-if="!isLoggedIn" class="panel p-10 text-center">
+      <p class="text-sm text-zinc-600 mb-4">登录后查看你发布的帖子</p>
       <button
         class="px-4 py-1.5 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
         @click="openLogin"
@@ -14,17 +14,19 @@
 
     <!-- 已登录：我的帖子列表 -->
     <template v-else>
-      <div class="flex items-center px-6 py-3 border-b border-zinc-700/50 bg-zinc-900/80">
-        <h1 class="text-sm font-medium text-zinc-300">📝 我的帖子</h1>
-      </div>
-      <PostList
+      <div class="panel overflow-hidden">
+        <div class="flex items-center px-6 py-3 border-b border-zinc-200 bg-white/60">
+          <h1 class="text-sm font-medium text-zinc-700">📝 我的帖子</h1>
+        </div>
+        <PostList
         :posts="posts"
         :total-pages="totalPages"
         :loading="loading"
         :error="error"
         @sort-change="handleSortChange"
         @page-change="handlePageChange"
-      />
+        />
+      </div>
     </template>
   </div>
 </template>
