@@ -1,16 +1,20 @@
 import type { Category, SortOption } from '~/types'
 
-/** 主分类列表（静态兜底，运行时优先从 API 获取） */
+/**
+ * 主分类列表（静态兜底，运行时优先从 API 获取）。
+ * icon 存 SVG key（见 constants/icons.ts 的 CATEGORY_ICONS），与数据库迁移
+ * 20260820150000_update_category_icons 对齐；后台分类管理改 key 即可换图标。
+ */
 export const mainCategories: Category[] = [
-  { slug: 'general', name: '综合讨论', icon: '📂', postCount: '12.3k' },
-  { slug: 'llm', name: '大模型', icon: '🤖', postCount: '8.9k' },
-  { slug: 'agent', name: 'AI Agent', icon: '🔧', postCount: '5.6k' },
-  { slug: 'prompt', name: 'Prompt 工程', icon: '✍️', postCount: '4.2k' },
-  { slug: 'art', name: 'AI 绘画', icon: '🎨', postCount: '7.1k' },
-  { slug: 'opensource', name: '开源模型', icon: '📦', postCount: '6.4k' },
-  { slug: 'tools', name: 'AI 工具', icon: '🛠', postCount: '9.8k' },
-  { slug: 'paper', name: '论文解读', icon: '📄', postCount: '3.1k' },
-  { slug: 'share', name: '经验分享', icon: '💡', postCount: '5.5k' },
+  { slug: 'general', name: '综合讨论', icon: 'message-circle', postCount: '12.3k' },
+  { slug: 'llm', name: '大模型', icon: 'brain', postCount: '8.9k' },
+  { slug: 'agent', name: 'AI Agent', icon: 'bot', postCount: '5.6k' },
+  { slug: 'prompt', name: 'Prompt 工程', icon: 'pen-tool', postCount: '4.2k' },
+  { slug: 'art', name: 'AI 绘画', icon: 'image', postCount: '7.1k' },
+  { slug: 'opensource', name: '开源模型', icon: 'git-branch', postCount: '6.4k' },
+  { slug: 'tools', name: 'AI 工具', icon: 'wrench', postCount: '9.8k' },
+  { slug: 'paper', name: '论文解读', icon: 'book-open', postCount: '3.1k' },
+  { slug: 'share', name: '经验分享', icon: 'lightbulb', postCount: '5.5k' },
 ]
 
 /**
