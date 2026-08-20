@@ -63,46 +63,10 @@
         </div>
       </div>
 
-      <!-- 正文 -->
+      <!-- 正文（完整 Markdown 编辑器：工具栏 + 图片上传 + 表情） -->
       <div>
-        <div class="flex items-center justify-between mb-1.5">
-          <label class="text-sm text-zinc-600">正文（支持 Markdown）</label>
-          <div class="flex items-center gap-2">
-            <button
-              type="button"
-              class="text-xs px-2.5 py-1 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition-colors"
-              :disabled="uploading"
-              @click="triggerUpload"
-            >
-              {{ uploading ? '上传中…' : '🖼 插入图片' }}
-            </button>
-            <button
-              type="button"
-              class="text-xs px-2.5 py-1 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition-colors"
-              @click="preview = !preview"
-            >
-              {{ preview ? '编辑' : '👁 预览' }}
-            </button>
-          </div>
-        </div>
-
-        <input ref="fileInputRef" type="file" accept="image/jpeg,image/png,image/gif,image/webp" class="hidden" @change="handleFile" />
-
-        <textarea
-          v-if="!preview"
-          v-model="content"
-          rows="14"
-          placeholder="分享你的内容，支持 Markdown 语法、图片…"
-          class="w-full bg-white border border-zinc-200 rounded-md px-3 py-2.5 text-sm text-zinc-800 placeholder-zinc-600 focus:outline-none focus:border-blue-500/60 font-mono resize-y"
-        ></textarea>
-
-        <!-- 预览 -->
-        <div
-          v-else
-          class="w-full bg-white border border-zinc-200 rounded-md px-4 py-3 text-sm text-zinc-700 min-h-[16rem] markdown-body"
-          v-html="content ? renderMarkdown(content) : '<span class=text-zinc-600>预览区域</span>'"
-        ></div>
-
+        <label class="block text-sm text-zinc-600 mb-1.5">正文</label>
+        <MarkdownEditor v-model="content" toolbar="full" :height="440" />
         <p class="text-xs text-zinc-600 mt-1">{{ content.length }} 字符</p>
       </div>
 
@@ -134,9 +98,7 @@
 
 <script setup lang="ts">
 import type { PostDetail } from '~/types'
-import { renderMarkdown } from '~/utils/markdown'
 import { usePosts } from '~/composables/usePosts'
-import { useUpload } from '~/composables/useUpload'
 import { extractErrorMessage } from '~/composables/api'
 import { subTags as fallbackTags } from '~/constants/categories'
 
@@ -155,7 +117,6 @@ const tagPool = computed<string[]>(() => {
 })
 const { isLoggedIn, openLogin } = useAuth()
 const { createPost, updatePost } = usePosts()
-const { uploading, error: uploadError, uploadImage } = useUpload()
 
 const isEdit = computed(() => !!props.post)
 
@@ -164,8 +125,6 @@ const title = ref(props.post?.title ?? '')
 const category = ref(props.post?.category ?? '')
 const content = ref(props.post?.content ?? '')
 const tags = ref<string[]>([...(props.post?.tags ?? [])])
-const fileInputRef = ref<HTMLInputElement | null>(null)
-const preview = ref(false)
 const submitting = ref(false)
 const error = ref('')
 
@@ -212,29 +171,6 @@ const tagRecommendations = computed(() => {
     .sort((a, b) => b.length - a.length)
     .slice(0, 5)
 })
-
-// ── 图片上传 ──
-function triggerUpload() {
-  if (!isLoggedIn.value) {
-    openLogin()
-    return
-  }
-  fileInputRef.value?.click()
-}
-
-async function handleFile(e: Event) {
-  const input = e.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = '' // 允许连续选择同一文件
-  if (!file) return
-  try {
-    const { path } = await uploadImage(file)
-    // 插入 Markdown 图片语法（相对路径：换域名/换环境图片不失效，渲染时走同源反代解析）
-    content.value += `\n![图片](${path})\n`
-  } catch (err: any) {
-    error.value = err?.message || '图片上传失败'
-  }
-}
 
 // ── 提交 ──
 async function submit() {

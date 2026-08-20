@@ -21,11 +21,7 @@
 
         <!-- 编辑框 -->
         <div v-if="editing" class="mt-2">
-          <textarea
-            v-model="editContent"
-            rows="3"
-            class="w-full bg-white border border-zinc-200 rounded-md px-3 py-2 text-sm text-zinc-800 focus:outline-none focus:border-blue-500/60 resize-y"
-          ></textarea>
+          <MarkdownEditor v-model="editContent" toolbar="compact" :height="160" />
           <div class="flex gap-2 mt-1.5">
             <button
               class="text-xs px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
@@ -62,12 +58,11 @@
 
         <!-- 回复框 -->
         <div v-if="replying" class="mt-2">
-          <textarea
+          <MarkdownEditor
             v-model="replyContent"
-            rows="2"
-            placeholder="回复 {{ comment.author.username }}…"
-            class="w-full bg-white border border-zinc-200 rounded-md px-3 py-2 text-sm text-zinc-800 placeholder-zinc-600 focus:outline-none focus:border-blue-500/60 resize-y"
-          ></textarea>
+            :height="140"
+            :placeholder="`回复 ${comment.author.username}…`"
+          ></MarkdownEditor>
           <div class="flex gap-2 mt-1.5">
             <button
               class="text-xs px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
@@ -96,11 +91,10 @@
 
 <script setup lang="ts">
 import type { CommentTreeItem } from '~/types'
-import { UserLevelLabel } from '~/types'
 import { renderMarkdown } from '~/utils/markdown'
 import { useComments } from '~/composables/useComments'
 import { extractErrorMessage } from '~/composables/api'
-import { levelBadgeClassFor } from '~/utils/format'
+import { useGameConfig } from '~/composables/useGameConfig'
 
 const props = defineProps<{ comment: CommentTreeItem }>()
 
@@ -123,8 +117,10 @@ watch(() => props.comment.likeCount, (v) => { likeCount.value = v })
 
 const isAuthor = computed(() => !!user.value && user.value.id === props.comment.author.id)
 
-const levelLabel = computed(() => UserLevelLabel[props.comment.author.level] ?? props.comment.author.level ?? '')
-const levelBadgeClass = computed(() => levelBadgeClassFor(props.comment.author.level))
+// 等级名/徽章来自后台配置，未加载时回退静态映射
+const { levelName, levelBadgeClass: badgeFor } = useGameConfig()
+const levelLabel = computed(() => levelName(props.comment.author.level))
+const levelBadgeClass = computed(() => badgeFor(props.comment.author.level))
 
 const timeAgo = useTimeAgo(() => new Date(props.comment.createdAt))
 

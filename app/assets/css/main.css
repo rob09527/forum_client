@@ -117,6 +117,19 @@
   @apply max-w-full rounded-md my-3;
 }
 
+/* 表情包(SVG 无 width/height,浏览器默认会填满容器宽度 → 固定成行内小图标,与编辑器内一致)。
+   尺寸值与 sticker-decoration.ts 的 widget 内联样式保持一致(vertical-align: middle)。 */
+.markdown-body img[src^="/stickers/"],
+.md-editor-preview img[src^="/stickers/"] {
+  display: inline-block;
+  width: 1.4em;
+  height: 1.4em;
+  max-width: 1.4em;
+  margin: 0 2px;
+  border-radius: 0;
+  vertical-align: middle;
+}
+
 .markdown-body hr { @apply border-zinc-200 my-5; }
 
 .markdown-body table { @apply w-full my-3 text-sm border-collapse; }

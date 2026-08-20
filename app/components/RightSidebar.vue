@@ -89,9 +89,9 @@
 </template>
 
 <script setup lang="ts">
-import { UserLevelLabel } from '~/types'
 import type { NewUser } from '~/types'
 import { useAdverts } from '~/composables/useAdverts'
+import { useGameConfig } from '~/composables/useGameConfig'
 
 defineProps<{
   hotPosts: { id: number; title: string }[]
@@ -104,14 +104,8 @@ const { user, isLoggedIn, logout, openLogin, openRegister } = useAuth()
 const { adverts } = useAdverts()
 const sidebarAds = computed(() => adverts.value.filter((a) => a.position === 'sidebar').slice(0, 10))
 
-const levelLabel = computed(() => UserLevelLabel[user.value?.level ?? ''] ?? user.value?.level ?? '')
-
-const levelBadgeClass = computed(() => {
-  const map: Record<string, string> = {
-    claw: 'bg-zinc-200 text-zinc-600',
-    leg: 'bg-amber-500/20 text-amber-600',
-    meat: 'bg-red-500/20 text-red-600',
-  }
-  return map[user.value?.level ?? ''] ?? 'bg-zinc-200 text-zinc-600'
-})
+// 等级名/徽章来自后台配置（GET /api/config/game），配置未加载时回退静态映射
+const { levelName, levelBadgeClass: badgeFor } = useGameConfig()
+const levelLabel = computed(() => levelName(user.value?.level))
+const levelBadgeClass = computed(() => badgeFor(user.value?.level))
 </script>

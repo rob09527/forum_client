@@ -106,12 +106,12 @@
 
         <!-- 发评论 -->
         <div class="mb-6">
-          <textarea
+          <MarkdownEditor
             v-model="newComment"
-            rows="3"
+            toolbar="compact"
+            :height="180"
             placeholder="友善发言，理性讨论…"
-            class="w-full bg-white border border-zinc-200 rounded-md px-3 py-2.5 text-sm text-zinc-800 placeholder-zinc-600 focus:outline-none focus:border-blue-500/60 resize-y"
-          ></textarea>
+          />
           <div class="flex items-center justify-end mt-2">
             <button
               class="px-4 py-1.5 text-sm bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white rounded-md transition-colors"
@@ -144,13 +144,13 @@
 
 <script setup lang="ts">
 import type { PostDetail } from '~/types'
-import { UserLevelLabel } from '~/types'
 import { categoryBadge, categoryName } from '~/constants/categories'
 import { renderMarkdown } from '~/utils/markdown'
-import { formatCount, levelBadgeClassFor } from '~/utils/format'
+import { formatCount } from '~/utils/format'
 import { usePosts } from '~/composables/usePosts'
 import { useComments } from '~/composables/useComments'
 import { extractErrorMessage } from '~/composables/api'
+import { useGameConfig } from '~/composables/useGameConfig'
 
 const route = useRoute()
 const router = useRouter()
@@ -265,8 +265,10 @@ async function submitComment() {
 }
 
 // ── 展示辅助 ──
-const authorLevelClass = computed(() => levelBadgeClassFor(post.value?.author.level))
-const authorLevelLabel = computed(() => UserLevelLabel[post.value?.author.level ?? ''] ?? post.value?.author.level ?? '')
+// 等级名/徽章来自后台配置，未加载时回退静态映射
+const { levelName, levelBadgeClass: badgeFor } = useGameConfig()
+const authorLevelClass = computed(() => badgeFor(post.value?.author.level))
+const authorLevelLabel = computed(() => levelName(post.value?.author.level))
 
 const postTimeAgo = useTimeAgo(() => new Date(post.value?.createdAt ?? ''))
 const editTimeAgo = useTimeAgo(() => new Date(post.value?.updatedAt ?? ''))

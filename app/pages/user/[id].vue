@@ -160,10 +160,11 @@
 
 <script setup lang="ts">
 import type { PointLogItem, UserProfile } from '~/types'
-import { PointTypeLabel, UserLevelLabel } from '~/types'
-import { formatCount, levelBadgeClassFor } from '~/utils/format'
+import { PointTypeLabel } from '~/types'
+import { formatCount } from '~/utils/format'
 import { useUserProfile } from '~/composables/useUserProfile'
 import { extractErrorMessage } from '~/composables/api'
+import { useGameConfig } from '~/composables/useGameConfig'
 
 const route = useRoute()
 const toast = useToast()
@@ -241,8 +242,10 @@ watch(isOwnProfile, (own) => {
 }, { immediate: true })
 
 // ── 展示辅助 ──
-const levelClass = computed(() => levelBadgeClassFor(profile.value?.level))
-const levelLabel = computed(() => UserLevelLabel[profile.value?.level ?? ''] ?? profile.value?.level ?? '')
+// 等级名/徽章来自后台配置，未加载时回退静态映射
+const { levelName, levelBadgeClass: badgeFor } = useGameConfig()
+const levelClass = computed(() => badgeFor(profile.value?.level))
+const levelLabel = computed(() => levelName(profile.value?.level))
 const nextLevelLabel = computed(() => {
   const next = profile.value?.levelProgress.nextLevelAt
   if (next === null || next === undefined) return ''

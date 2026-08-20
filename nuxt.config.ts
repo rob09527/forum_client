@@ -7,6 +7,9 @@ export default defineNuxtConfig({
 
   modules: ['@nuxt/ui', '@vueuse/nuxt'],
 
+  // 组件按文件名的 PascalCase 命名,子目录不加前缀(与现有 post/PostForm、comment/CommentItem 约定一致)
+  components: [{ path: '~/components', pathPrefix: false }],
+
   css: ['~/assets/css/main.css'],
 
   runtimeConfig: {

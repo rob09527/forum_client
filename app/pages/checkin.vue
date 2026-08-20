@@ -94,9 +94,9 @@
       <div class="panel p-6">
         <h2 class="text-sm font-medium text-zinc-700 mb-3">📜 签到规则</h2>
         <ul class="text-xs text-zinc-500 space-y-2 leading-relaxed">
-          <li>① 每日签到 +5 鸡腿</li>
-          <li>② 连续签到加成：连续第 N 天额外 +min(N, 5)，连续 5 天及以上每天可签得 10</li>
-          <li>③ 连续满 7 天里程碑：第 7 / 14 / 21 … 天额外 +30（第 7 天当天 = 5 + 5 + 30 = 40）</li>
+          <li>① 每日签到 +{{ cfg.base }} 鸡腿</li>
+          <li>② 连续签到加成：连续第 N 天额外 +min(N×{{ cfg.streakBonusPerDay }}, {{ cfg.streakBonusCap }})，连续 {{ cfg.streakBonusCap }} 天及以上每天可签得 {{ cfg.base + cfg.streakBonusCap }}</li>
+          <li>③ 连续满 {{ cfg.milestoneEvery }} 天里程碑：第 {{ cfg.milestoneEvery }} / {{ cfg.milestoneEvery * 2 }} / … 天额外 +{{ cfg.milestoneBonus }}（第 {{ cfg.milestoneEvery }} 天当天 = {{ cfg.base }} + {{ milestoneStreak }} + {{ cfg.milestoneBonus }} = {{ milestoneDayTotal }}）</li>
           <li>④ 断签连续天数归零，但累计签到天数保留</li>
           <li>⑤ 每人每天限签 1 次</li>
         </ul>
@@ -109,12 +109,23 @@
 import type { CheckinStatus } from '~/types'
 import { dateKey, monthKey } from '~/utils/date'
 import { extractErrorMessage } from '~/composables/api'
+import { useGameConfig } from '~/composables/useGameConfig'
 
 const { isLoggedIn, openLogin, restoreSession } = useAuth()
 const { getStatus, checkin: submitCheckin } = useCheckin()
 const toast = useToast()
 
 const weekdays = ['一', '二', '三', '四', '五', '六', '日']
+
+// 签到规则文案来自后台配置（未配置/未加载时用默认值）
+const { checkinConfig } = useGameConfig()
+const cfg = computed(() => checkinConfig.value)
+/** 里程碑当天的基础连签加成（规则示例用） */
+const milestoneStreak = computed(() =>
+  Math.min(cfg.value.milestoneEvery * cfg.value.streakBonusPerDay, cfg.value.streakBonusCap)
+)
+/** 里程碑当天总所得（规则示例用） */
+const milestoneDayTotal = computed(() => cfg.value.base + milestoneStreak.value + cfg.value.milestoneBonus)
 
 // 锚点：今天固定（避免跨天渲染跳动）
 const today = new Date()

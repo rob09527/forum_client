@@ -259,3 +259,35 @@ export interface CheckinResult {
   /** 累计签到天数 */
   totalDays: number
 }
+
+// ── 游戏化配置（后台可控，GET /api/config/game，未配置时后端返回默认值） ──
+
+/** 签到奖励配置（与后端 CheckinConfig 对齐） */
+export interface CheckinConfig {
+  /** 每日签到基础分 */
+  base: number
+  /** 连续签到每日加成系数 */
+  streakBonusPerDay: number
+  /** 连续签到加成上限 */
+  streakBonusCap: number
+  /** 里程碑间隔天数（如 7 → 第 7/14/21… 天） */
+  milestoneEvery: number
+  /** 里程碑奖励 */
+  milestoneBonus: number
+}
+
+/** 单个等级配置（与后端 LevelConfig 对齐） */
+export interface LevelConfig {
+  /** 等级标识（User.level），唯一 */
+  key: string
+  /** 等级中文名 */
+  name: string
+  /** 升到该等级所需累计鸡腿（minTotal=0 为起始等级） */
+  minTotal: number
+}
+
+/** 游戏化配置（GET /api/config/game 响应） */
+export interface GameConfig {
+  checkin: CheckinConfig
+  levels: LevelConfig[]
+}
