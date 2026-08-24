@@ -44,6 +44,15 @@
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 flex-wrap">
               <span class="text-lg font-semibold text-zinc-900">{{ profile.username }}</span>
+              <!-- 关注按钮（仅他人视角） -->
+              <button
+                v-if="!isOwnProfile"
+                class="text-xs px-3 py-1 rounded-md transition-colors"
+                :class="following ? 'bg-zinc-200 text-zinc-600 hover:bg-zinc-300' : 'bg-blue-500 hover:bg-blue-600 text-white'"
+                @click="handleToggleFollow"
+              >
+                {{ following ? '已关注' : '+ 关注' }}
+              </button>
               <span class="text-[11px] px-2 py-0.5 rounded font-medium" :class="levelClass">
                 {{ levelLabel }}
               </span>
@@ -59,7 +68,7 @@
         </div>
 
         <!-- 统计 -->
-        <div class="grid gap-3 mt-6" :class="isOwnProfile ? 'grid-cols-4' : 'grid-cols-3'">
+        <div class="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-6">
           <div v-if="isOwnProfile" class="text-center p-3 rounded-lg bg-zinc-100">
             <div class="text-xl font-bold text-emerald-600">🍗 {{ formatCount(profile.points ?? 0) }}</div>
             <div class="text-[11px] text-zinc-500 mt-1">鸡腿余额</div>
@@ -76,6 +85,15 @@
             <div class="text-xl font-bold text-zinc-800">{{ formatCount(profile.commentCount) }}</div>
             <div class="text-[11px] text-zinc-500 mt-1">评论</div>
           </div>
+          <!-- 关注 / 粉丝（点击跳转关系页；他人主页也能看对方的关系数） -->
+          <NuxtLink to="/following?tab=following" class="text-center p-3 rounded-lg bg-zinc-100 hover:bg-zinc-200 transition-colors block">
+            <div class="text-xl font-bold text-zinc-800">{{ formatCount(profile.followingCount) }}</div>
+            <div class="text-[11px] text-zinc-500 mt-1">关注</div>
+          </NuxtLink>
+          <NuxtLink to="/following?tab=followers" class="text-center p-3 rounded-lg bg-zinc-100 hover:bg-zinc-200 transition-colors block">
+            <div class="text-xl font-bold text-zinc-800">{{ formatCount(profile.followerCount) }}</div>
+            <div class="text-[11px] text-zinc-500 mt-1">粉丝</div>
+          </NuxtLink>
         </div>
 
         <!-- 等级进度条 -->
@@ -163,6 +181,7 @@ import type { PointLogItem, UserProfile } from '~/types'
 import { PointTypeLabel } from '~/types'
 import { formatCount } from '~/utils/format'
 import { useUserProfile } from '~/composables/useUserProfile'
+import { useFollow } from '~/composables/useFollow'
 import { extractErrorMessage } from '~/composables/api'
 import { useGameConfig } from '~/composables/useGameConfig'
 
@@ -175,6 +194,7 @@ const userId = Number(route.params.id)
 const userIdValid = Number.isInteger(userId) && userId > 0
 
 const { getProfile, getPointsLog, updateAvatar } = useUserProfile()
+const { toggleFollow } = useFollow()
 
 // ── 资料（需登录；SSR 未登录 401 返回 null，登录后重拉） ──
 const { data: profile, pending, refresh: refreshProfile } = useAsyncData<UserProfile | null>(
@@ -193,6 +213,33 @@ const showAvatarPicker = ref(false)
 
 /** 当前用户是否在查看自己的资料 */
 const isOwnProfile = computed(() => isLoggedIn.value && user.value?.id === userId)
+
+// ── 关注（后端 profile 返回 isFollowing 作初始值，切换后本地维护 + 同步计数） ──
+const following = ref(false)
+
+watchEffect(() => {
+  if (profile.value) {
+    following.value = profile.value.isFollowing
+  }
+})
+
+async function handleToggleFollow() {
+  if (!isLoggedIn.value) {
+    openLogin()
+    return
+  }
+  try {
+    const next = await toggleFollow(userId, following.value)
+    following.value = next
+    // 同步资料卡的粉丝数
+    if (profile.value) {
+      profile.value.followerCount = Math.max(0, profile.value.followerCount + (next ? 1 : -1))
+      profile.value.isFollowing = next
+    }
+  } catch (err: any) {
+    toast.add({ title: extractErrorMessage(err, '操作失败'), color: 'error' })
+  }
+}
 
 async function handleAvatarSelect(avatar: string) {
   if (!isLoggedIn.value) return

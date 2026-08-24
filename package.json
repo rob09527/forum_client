@@ -10,6 +10,7 @@
     "preview": "nuxt preview"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.20.3",
     "@codemirror/state": "^6.7.1",
     "@codemirror/view": "^6.43.9",
     "@nuxt/ui": "^4.9.0",

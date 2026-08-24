@@ -93,7 +93,7 @@ onBeforeUnmount(stopTipTicker)
 
 function toggleTag(name: string) {
   // 继承 URL 中的 category，只改 tag，避免丢板块参数；不做类型强转（query 值本身可为 string|string[]）
-  const query: Record<string, unknown> = {}
+  const query: Record<string, string | (string | null)[] | null | undefined> = {}
   if (route.query.category) query.category = route.query.category
   if (activeTag.value === name) query.tag = undefined
   else query.tag = name

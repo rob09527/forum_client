@@ -42,6 +42,9 @@
         <div class="text-xs font-mono font-medium text-zinc-700">{{ post.commentCount }}</div>
         <div class="text-[10px] text-zinc-500">回复</div>
       </NuxtLink>
+
+      <!-- 自定义尾部操作（如「我的收藏」的取消收藏按钮） -->
+      <slot name="trailing" />
     </div>
   </article>
 </template>

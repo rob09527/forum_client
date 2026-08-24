@@ -64,7 +64,22 @@
           </button>
         </template>
         <!-- 已登录 -->
-        <div v-else ref="dropdownRef" class="relative">
+        <template v-else>
+          <!-- 通知铃铛 + 未读红点 → 通知中心 -->
+          <NuxtLink
+            to="/notifications"
+            class="relative flex items-center justify-center w-8 h-8 rounded-md hover:bg-zinc-100 transition-colors"
+            title="通知"
+          >
+            <span class="text-base leading-none">🔔</span>
+            <span
+              v-if="unread > 0"
+              class="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-medium flex items-center justify-center"
+            >
+              {{ unread > 99 ? '99+' : unread }}
+            </span>
+          </NuxtLink>
+          <div ref="dropdownRef" class="relative">
           <button class="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-zinc-100 transition-colors text-left" @click="toggleDropdown">
             <Avatar :username="user?.username" :avatar="user?.avatar" size="sm" />
             <span class="text-sm text-zinc-700 hidden xl:inline max-w-[80px] truncate">{{ user?.username }}</span>
@@ -87,6 +102,20 @@
                 >
                   👤 个人主页
                 </NuxtLink>
+                <NuxtLink
+                  to="/my/bookmarks"
+                  class="w-full px-4 py-2 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors text-left block"
+                  @click="showDropdown = false"
+                >
+                  🔖 我的收藏
+                </NuxtLink>
+                <NuxtLink
+                  to="/following"
+                  class="w-full px-4 py-2 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors text-left block"
+                  @click="showDropdown = false"
+                >
+                  📡 关注动态
+                </NuxtLink>
               </div>
               <div class="border-t border-zinc-200 py-1">
                 <button
@@ -98,7 +127,8 @@
               </div>
             </div>
           </Transition>
-        </div>
+          </div>
+        </template>
       </div>
     </div>
     </div>
@@ -107,6 +137,8 @@
 
 <script setup lang="ts">
 const { user, isLoggedIn, logout, openLogin, openRegister } = useAuth()
+const toast = useToast()
+const { unread, fetchUnread, initStream, stopStream } = useNotifications()
 
 const showDropdown = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
@@ -137,10 +169,28 @@ function handleEsc(e: KeyboardEvent) {
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
   document.addEventListener('keydown', handleEsc)
+  // 通知：初始拉未读数；已登录则建立 SSE 长连接
+  fetchUnread()
+  initStream((_n) => {
+    toast.add({ title: '收到新通知', color: 'info', duration: 3000 })
+  })
 })
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
   document.removeEventListener('keydown', handleEsc)
+  stopStream()
+})
+
+// 登录态变化：登录后建流，登出后清理并清零未读
+watch(isLoggedIn, (loggedIn) => {
+  if (loggedIn) {
+    fetchUnread()
+    initStream((_n) => {
+      toast.add({ title: '收到新通知', color: 'info', duration: 3000 })
+    })
+  } else {
+    stopStream()
+  }
 })
 
 async function handleLogout() {

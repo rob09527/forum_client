@@ -83,6 +83,13 @@
           >
             👍 {{ liked ? '已点赞' : '点赞' }}
           </button>
+          <button
+            class="flex items-center gap-1.5 px-4 py-1.5 text-sm rounded-md transition-colors"
+            :class="bookmarked ? 'bg-amber-500/20 text-amber-600' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700'"
+            @click="toggleBookmarkClick"
+          >
+            🔖 {{ bookmarked ? '已收藏' : '收藏' }}
+          </button>
           <NuxtLink
             v-if="isAuthor"
             :to="`/post/${post.id}/edit`"
@@ -149,6 +156,7 @@ import { renderMarkdown } from '~/utils/markdown'
 import { formatCount } from '~/utils/format'
 import { usePosts } from '~/composables/usePosts'
 import { useComments } from '~/composables/useComments'
+import { useBookmarks } from '~/composables/useBookmarks'
 import { extractErrorMessage } from '~/composables/api'
 import { useGameConfig } from '~/composables/useGameConfig'
 
@@ -162,6 +170,7 @@ const postIdValid = Number.isInteger(postId) && postId > 0
 
 const { getPost, removePost, likePost, unlikePost } = usePosts()
 const { comments, loadComments, createComment } = useComments()
+const { toggleBookmark } = useBookmarks()
 const { user, isLoggedIn, openLogin } = useAuth()
 
 // ── 帖子数据（详情接口需登录；SSR 未登录 401 返回 null，登录后重拉） ──
@@ -215,6 +224,27 @@ async function toggleLike() {
     const code = err?.data?.error?.code
     if (code === 'ALREADY_LIKED') liked.value = true
     if (code === 'NOT_LIKED') liked.value = false
+    toast.add({ title: extractErrorMessage(err, '操作失败'), color: 'error' })
+  }
+}
+
+// ── 收藏状态（后端详情返回 isBookmarked 作初始值，切换后本地维护） ──
+const bookmarked = ref(false)
+
+watchEffect(() => {
+  if (post.value) {
+    bookmarked.value = post.value.isBookmarked
+  }
+})
+
+async function toggleBookmarkClick() {
+  if (!isLoggedIn.value) {
+    openLogin()
+    return
+  }
+  try {
+    bookmarked.value = await toggleBookmark(postId, bookmarked.value)
+  } catch (err: any) {
     toast.add({ title: extractErrorMessage(err, '操作失败'), color: 'error' })
   }
 }

@@ -16,6 +16,8 @@ export interface PostListItem {
   likeCount: number
   commentCount: number
   isPinned: boolean
+  /** 当前登录用户是否已收藏（未登录或未注入时为 false） */
+  isBookmarked: boolean
   lastReplyUser: string | null
   lastReplyTime: string | null
   createdAt: string
@@ -209,6 +211,12 @@ export interface UserProfile {
   stars: number
   postCount: number
   commentCount: number
+  /** 粉丝数（冗余字段） */
+  followerCount: number
+  /** 关注数（冗余字段） */
+  followingCount: number
+  /** 当前登录用户是否已关注该用户（未登录或为自己时为 false） */
+  isFollowing: boolean
   createdAt: string
   levelProgress: LevelProgress
 }
@@ -290,4 +298,72 @@ export interface LevelConfig {
 export interface GameConfig {
   checkin: CheckinConfig
   levels: LevelConfig[]
+}
+
+// ── 收藏 / 关注 / 通知（关系链） ──
+
+/** 收藏列表项（GET /api/me/bookmarks，与后端 BookmarkItem 对齐） */
+export interface BookmarkItem {
+  /** 收藏时间，ISO 8601 */
+  bookmarkedAt: string
+  /** 帖子摘要（与帖子列表同一结构） */
+  post: PostListItem
+}
+
+/** 关注/粉丝列表项（与后端 FollowUserItem 对齐） */
+export interface FollowUserItem {
+  id: number
+  username: string
+  avatar: string | null
+  level: string
+}
+
+/** 用户搜索项（@提及候选下拉用） */
+export interface UserSummary {
+  id: number
+  username: string
+  avatar: string | null
+  level: string
+}
+
+/** 通知触发者摘要 */
+export interface NotificationActor {
+  id: number
+  username: string
+  avatar: string | null
+}
+
+/** 通知项（与后端 NotificationItem 对齐） */
+export interface NotificationItem {
+  id: number
+  /** comment | reply | like | follow | system | mention */
+  type: string
+  /** 触发者列表（最多 3 个；system 为空数组） */
+  actors: NotificationActor[]
+  /** 触发者总数（聚合累计事件数，actorIds 截断后的真实人数/次数） */
+  actorCount: number
+  /** 关联帖子 ID，帖子已删或无关为 null */
+  postId: number | null
+  /** 帖子标题，帖子已删或无关为 null */
+  postTitle: string | null
+  /** 关联评论 ID */
+  commentId: number | null
+  /** 评论内容截断 */
+  commentExcerpt: string | null
+  /** 通知正文（system 用） */
+  content: string | null
+  /** 是否已读 */
+  isRead: boolean
+  /** 通知时间，ISO 8601 */
+  createdAt: string
+}
+
+/** 通知类型中文文案模板 */
+export const NotificationTypeLabel: Record<string, string> = {
+  comment: '评论了你的帖子',
+  reply: '回复了你的评论',
+  like: '赞了你的内容',
+  follow: '关注了你',
+  system: '系统通知',
+  mention: '提到了你',
 }

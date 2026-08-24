@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { useId, h, type VNode } from 'vue'
 import { MdEditor, type ToolbarNames, type ExposeParam } from 'md-editor-v3'
+import type { CompletionSource } from '@codemirror/autocomplete'
 import 'md-editor-v3/lib/style.css'
 import EmojiToolbarButton from './EmojiToolbarButton.vue'
 import ColorToolbarButton from './ColorToolbarButton.vue'
 import { useUpload } from '~/composables/useUpload'
 import { useAuth } from '~/composables/useAuth'
+import { useUserSearch } from '~/composables/useUserSearch'
+import { mentionCompletion } from '~/utils/editor/mention-completion'
 import { extractErrorMessage } from '~/composables/api'
 
 /**
@@ -69,6 +72,10 @@ const toolbarList = computed<ToolbarNames[]>(() =>
 const defToolbars: VNode[] = [h(EmojiToolbarButton), h(ColorToolbarButton)]
 const defToolbarsProp = computed(() => defToolbars as unknown as string)
 
+// ── @提及自动补全(官方 completions prop → autocompletion override;setup 内调用 composable 绑定 Nuxt 上下文) ──
+const { searchUsers } = useUserSearch()
+const completions: CompletionSource[] = [mentionCompletion(searchUsers)]
+
 // ── 图片上传(对接现有 /api/upload) ──
 const { isLoggedIn, openLogin } = useAuth()
 const toast = useToast()
@@ -102,6 +109,7 @@ async function handleUploadImg(files: File[], callback: (urls: string[]) => void
     :theme="theme"
     :toolbars="toolbarList"
     :def-toolbars="defToolbarsProp"
+    :completions="completions"
     preview-theme="github"
     :preview="false"
     :placeholder="placeholder"
