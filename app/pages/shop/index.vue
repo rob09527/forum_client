@@ -13,11 +13,11 @@
         <button
           v-for="t in tabs"
           :key="t.value"
-          class="px-3 py-1 text-sm rounded-md transition-colors"
+          class="px-3 py-1 text-sm rounded-md transition-colors inline-flex items-center gap-1"
           :class="activeTab === t.value ? 'bg-zinc-200 text-zinc-800' : 'text-zinc-600 hover:text-zinc-900'"
           @click="switchTab(t.value)"
         >
-          {{ t.label }}
+          <AppIcon :name="t.icon" :size="13" /> {{ t.label }}
         </button>
       </div>
     </div>
@@ -147,8 +147,8 @@ const { balance } = usePoints()
 /** Tab 态：?tab=mine 直达「我的」 */
 const activeTab = computed(() => (route.query.tab === 'mine' ? 'mine' : 'shop'))
 const tabs = [
-  { label: '🛒 装饰', value: 'shop' },
-  { label: '🎨 我的', value: 'mine' },
+  { label: '装饰', value: 'shop', icon: 'shopping-cart' },
+  { label: '我的', value: 'mine', icon: 'palette' },
 ]
 
 function switchTab(tab: string) {
@@ -198,9 +198,9 @@ const PAGE_SIZE = 6
 const subTab = ref<ShopItemTypeValue>((route.query.sub as ShopItemTypeValue) === 'avatar' ? 'avatar' : 'title')
 const page = ref(0)
 const subTabs = computed(() => [
-  { label: '🎖 专属称号', value: 'title' as ShopItemTypeValue, count: titleItems.value.length },
-  { label: '🎨 用户名颜色', value: 'username_color' as ShopItemTypeValue, count: colorItems.value.length },
-  { label: '👤 头像', value: 'avatar' as ShopItemTypeValue, count: avatarItems.value.length },
+  { label: '专属称号', value: 'title' as ShopItemTypeValue, count: titleItems.value.length, icon: 'medal' },
+  { label: '用户名颜色', value: 'username_color' as ShopItemTypeValue, count: colorItems.value.length, icon: 'palette' },
+  { label: '头像', value: 'avatar' as ShopItemTypeValue, count: avatarItems.value.length, icon: 'user' },
 ])
 const currentList = computed(() =>
   subTab.value === 'title' ? titleItems.value
