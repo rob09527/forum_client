@@ -64,7 +64,9 @@ const fallbackTextClass = computed(() => `${textSizeMap[props.size]} text-zinc-6
 // 权威风格清单（后端下发），未就绪时为空数组，getAvatarUrl 内部兜底为单一风格
 const { data: avatarStyles } = useAvatarStyles()
 
-const src = computed(() => getAvatarUrl(props.username, props.avatar, avatarStyles.value?.styles))
+const src = computed(() =>
+  getAvatarUrl(props.username, props.avatar, avatarStyles.value?.styles, avatarStyles.value?.perStyle),
+)
 const initial = computed(() => avatarInitial(props.username))
 
 const imgRef = ref<HTMLImageElement | null>(null)

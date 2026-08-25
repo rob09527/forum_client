@@ -1,7 +1,8 @@
 <template>
   <div>
     <p class="text-sm text-zinc-600 mb-3">
-      选择本地头像（{{ styles.length }} 个风格 × {{ AVATARS_PER_STYLE }} 个）
+      选择本地头像（{{ styles.length }} 个风格 × {{ perStyle }} 个）
+      <span class="text-xs text-zinc-400">· 🔒 为付费头像，点击前往商城解锁</span>
     </p>
 
     <!-- 风格分类：点击展开该风格的 20 个头像 -->
@@ -22,16 +23,16 @@
       </button>
     </div>
 
-    <!-- 当前风格的 20 个头像 -->
+    <!-- 当前风格的 20 个头像：免费可点选，付费 🔒 角标 + 价格、点击去商城 -->
     <div v-if="expandedStyle" class="grid grid-cols-8 gap-1.5 max-h-[320px] overflow-y-auto">
       <button
-        v-for="n in AVATARS_PER_STYLE"
+        v-for="n in perStyle"
         :key="n"
-        class="rounded-lg transition-all border-2"
+        class="relative rounded-lg transition-all border-2"
         :class="isSelected(expandedStyle, n)
           ? 'border-blue-500 bg-blue-500/10'
           : 'border-zinc-200 bg-white hover:border-zinc-200'"
-        @click="$emit('select', localAvatarPath(expandedStyle, n))"
+        @click="onAvatarClick(expandedStyle, n)"
       >
         <img
           :src="localAvatarPath(expandedStyle, n)"
@@ -39,28 +40,54 @@
           class="w-full h-full rounded-md"
           loading="lazy"
         />
+        <span
+          v-if="isPaid(expandedStyle, n)"
+          class="absolute inset-x-0 bottom-0 rounded-b-md bg-black/60 text-white text-[10px] py-0.5 flex items-center justify-center gap-0.5"
+        >
+          🔒 {{ priceOf(expandedStyle, n) }}
+        </span>
       </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { AVATARS_PER_STYLE, deriveStyleDefs, localAvatarPath } from '~/utils/avatar'
+import { deriveStyleDefs, localAvatarPath } from '~/utils/avatar'
 import { useAvatarStyles } from '~/composables/useAvatarStyles'
+import { useShop } from '~/composables/useShop'
 
 const props = defineProps<{
   /** 当前头像路径（/avatars/...），用于高亮已选中的头像 */
   currentAvatar?: string
 }>()
 
-defineEmits<{
-  /** 选中某个本地头像，传出完整路径 */
+const emit = defineEmits<{
+  /** 选中某个免费本地头像，传出完整路径 */
   select: [avatar: string]
 }>()
 
-// 权威风格清单由后端下发；未就绪时为空数组，列表暂不渲染（不会闪错头像）
+const toast = useToast()
+
+// 权威风格清单与每风格数量由后端下发；未就绪时为空数组，列表暂不渲染（不会闪错头像）
 const { data: avatarStyles } = useAvatarStyles()
 const styles = computed(() => deriveStyleDefs(avatarStyles.value?.styles ?? []))
+const perStyle = computed(() => avatarStyles.value?.perStyle ?? 20)
+
+/**
+ * 头像商品价目表 path → price（头像商品化）：
+ * 从商城 items（type='avatar'）构建；播种前（无 avatar 商品行）priceMap 为空 → 全部按免费处理（向后兼容）。
+ */
+const { items, fetchItems } = useShop()
+const priceMap = computed(() => {
+  const m = new Map<string, number>()
+  for (const it of items.value) {
+    if (it.type === 'avatar') m.set(it.renderValue, it.price)
+  }
+  return m
+})
+onMounted(() => {
+  fetchItems()
+})
 
 /** 当前展开的风格（默认高亮到用户当前头像所属风格，否则机器人） */
 const expandedStyle = ref<string>(
@@ -73,5 +100,26 @@ const expandedStyle = ref<string>(
 /** 某个头像是否被选中（按路径精确匹配） */
 function isSelected(style: string, n: number): boolean {
   return props.currentAvatar === localAvatarPath(style, n)
+}
+
+/** 某个头像的商品价格（无商品行 → 0 = 免费） */
+function avatarPrice(style: string, n: number): number {
+  return priceMap.value.get(localAvatarPath(style, n)) ?? 0
+}
+function isPaid(style: string, n: number): boolean {
+  return avatarPrice(style, n) > 0
+}
+function priceOf(style: string, n: number): number {
+  return avatarPrice(style, n)
+}
+
+/** 免费 → 选中；付费 → 引导去商城解锁（跳 /shop + toast） */
+function onAvatarClick(style: string, n: number) {
+  if (isPaid(style, n)) {
+    toast.add({ title: `「${style}-${String(n).padStart(2, '0')}」需在商城解锁 →`, color: 'warning' })
+    navigateTo('/shop?sub=avatar')
+    return
+  }
+  emit('select', localAvatarPath(style, n))
 }
 </script>

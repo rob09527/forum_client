@@ -1,10 +1,18 @@
 import { computed, reactive } from 'vue'
-import type { ApiResponse, CheckinConfig, GameConfig } from '~/types'
+import type {
+  ApiResponse,
+  BountyConfig,
+  CheckinConfig,
+  GameConfig,
+  PropsConfig,
+  ShopConfig,
+  TipConfig,
+} from '~/types'
 import { UserLevelLabel } from '~/types'
 import { useApiBase } from './api'
 
 /**
- * 游戏化配置（签到奖励 / 等级体系）。
+ * 游戏化配置（签到奖励 / 等级体系 / 消费体系四组：商城·打赏·悬赏·道具）。
  * 来源：后端 GET /api/config/game —— 后台经共享 Redis 控制，未配置时后端返回默认值。
  *
  * 模块级单例缓存：多组件/并发只拉一次；请求失败用前端兜底值，不阻塞页面渲染。
@@ -18,6 +26,28 @@ const FALLBACK_CHECKIN: CheckinConfig = {
   streakBonusCap: 5,
   milestoneEvery: 7,
   milestoneBonus: 30,
+}
+
+/** 前端兜底消费配置：与后端 DEFAULT_*_CONFIG 保持一致（后端未配置/加载失败时兜底） */
+const FALLBACK_SHOP: ShopConfig = { defaultDurationDays: 30, remindDays: 3 }
+const FALLBACK_TIP: TipConfig = { amounts: [6, 66, 188], customMin: 1, customMax: 1000 }
+const FALLBACK_BOUNTY: BountyConfig = {
+  feeRate: 0.1,
+  timeoutDays: 7,
+  amountMin: 50,
+  amountMax: 10000,
+  minTotalEarned: 0,
+  minRegisterDays: 0,
+  maxActivePerUser: 5,
+}
+const FALLBACK_PROPS: PropsConfig = {
+  makeupPrice: 80,
+  makeupMonthlyLimit: 3,
+  renamePrice: 200,
+  renameCooldownDays: 30,
+  quotaPerPurchase: 10 * 1024 * 1024,
+  quotaPrice: 150,
+  quotaTotalLimit: 500 * 1024 * 1024,
 }
 
 /** 已知三档等级徽章配色（保持原视觉） */
@@ -59,7 +89,14 @@ export function useGameConfig() {
         state.loading = false
       }
     }
-    return state.config ?? { checkin: FALLBACK_CHECKIN, levels: [] }
+    return state.config ?? {
+      checkin: FALLBACK_CHECKIN,
+      levels: [],
+      shop: FALLBACK_SHOP,
+      tip: FALLBACK_TIP,
+      bounty: FALLBACK_BOUNTY,
+      props: FALLBACK_PROPS,
+    }
   }
 
   // 挂载即拉取（幂等：只有首个调用真正发请求，其余复用）
@@ -67,6 +104,18 @@ export function useGameConfig() {
 
   /** 签到奖励配置（未加载/失败时用前端兜底默认值） */
   const checkinConfig = computed<CheckinConfig>(() => state.config?.checkin ?? FALLBACK_CHECKIN)
+
+  /** 商城配置（装饰默认时效/到期提醒提前天数） */
+  const shopConfig = computed<ShopConfig>(() => state.config?.shop ?? FALLBACK_SHOP)
+
+  /** 打赏配置（快捷档位/自定义区间） */
+  const tipConfig = computed<TipConfig>(() => state.config?.tip ?? FALLBACK_TIP)
+
+  /** 悬赏配置（手续费率/超时天数/门槛） */
+  const bountyConfig = computed<BountyConfig>(() => state.config?.bounty ?? FALLBACK_BOUNTY)
+
+  /** 道具配置（补签/改名/扩容价格与限制） */
+  const propsConfig = computed<PropsConfig>(() => state.config?.props ?? FALLBACK_PROPS)
 
   /** 等级列表（未加载/失败时为空，等级名回退静态映射） */
   const levels = computed(() => state.config?.levels ?? [])
@@ -91,5 +140,15 @@ export function useGameConfig() {
     return 'bg-zinc-200 text-zinc-600'
   }
 
-  return { load, checkinConfig, levels, levelName, levelBadgeClass }
+  return {
+    load,
+    checkinConfig,
+    shopConfig,
+    tipConfig,
+    bountyConfig,
+    propsConfig,
+    levels,
+    levelName,
+    levelBadgeClass,
+  }
 }
