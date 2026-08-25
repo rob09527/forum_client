@@ -12,8 +12,7 @@
 
         <!-- 弹窗主体（极淡装饰底铺氛围，白色遮罩控透明度，视觉AI出图 §5 #6） -->
         <div
-          class="relative bg-white border border-zinc-200 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden"
-          style="background-image: linear-gradient(rgba(255,255,255,0.78), rgba(255,255,255,0.78)), url('/images/auth-decor.webp'); background-size: cover; background-position: center;"
+          class="relative bg-white border border-zinc-200 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden auth-decor"
         >
           <!-- Logo -->
           <div class="text-center pt-8 pb-2">
@@ -86,10 +85,11 @@
                     />
                     <button
                       type="button"
-                      class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-700 text-sm transition-colors"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-700 transition-colors"
+                      aria-label="切换密码可见"
                       @click="showLoginPwd = !showLoginPwd"
                     >
-                      {{ showLoginPwd ? '🙈' : '👁' }}
+                      <AppIcon :name="showLoginPwd ? 'eye-off' : 'eye'" :size="16" />
                     </button>
                   </div>
                   <p v-if="loginErrors.password" class="text-xs text-red-600 mt-1 ml-0.5">{{ loginErrors.password }}</p>
@@ -101,14 +101,13 @@
                 v-if="loginError"
                 class="flex items-center gap-2 text-xs text-red-600 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5"
               >
-                <span class="flex-shrink-0">⚠️</span>
+                <AppIcon name="alert-triangle" :size="14" class="flex-shrink-0" />
                 <span>{{ loginError }}</span>
               </div>
 
               <!-- 提交按钮 -->
               <button
-                class="w-full h-11 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed
-                       text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                class="btn btn-primary w-full h-11 text-sm font-medium flex items-center justify-center gap-2"
                 :disabled="isLoading"
                 @click="handleLogin"
               >
@@ -175,10 +174,11 @@
                     />
                     <button
                       type="button"
-                      class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-700 text-sm transition-colors"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-700 transition-colors"
+                      aria-label="切换密码可见"
                       @click="showRegisterPwd = !showRegisterPwd"
                     >
-                      {{ showRegisterPwd ? '🙈' : '👁' }}
+                      <AppIcon :name="showRegisterPwd ? 'eye-off' : 'eye'" :size="16" />
                     </button>
                   </div>
                   <p v-if="registerErrors.password" class="text-xs text-red-600 mt-1 ml-0.5">{{ registerErrors.password }}</p>
@@ -190,14 +190,13 @@
                 v-if="registerError"
                 class="flex items-center gap-2 text-xs text-red-600 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5"
               >
-                <span class="flex-shrink-0">⚠️</span>
+                <AppIcon name="alert-triangle" :size="14" class="flex-shrink-0" />
                 <span>{{ registerError }}</span>
               </div>
 
               <!-- 提交按钮 -->
               <button
-                class="w-full h-11 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed
-                       text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                class="btn btn-primary w-full h-11 text-sm font-medium flex items-center justify-center gap-2"
                 :disabled="isLoading"
                 @click="handleRegister"
               >
@@ -371,6 +370,13 @@ watch(showAuthModal, (open) => {
 </script>
 
 <style scoped>
+/* 弹窗装饰底：极淡白色遮罩压住氛围图，营造通透背景（UI 升级阶段3：内联 style 抽到 scoped class） */
+.auth-decor {
+  background-image: linear-gradient(rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.78)), url('/images/auth-decor.webp');
+  background-size: cover;
+  background-position: center;
+}
+
 .modal-enter-active,
 .modal-leave-active {
   transition: opacity 0.2s ease;

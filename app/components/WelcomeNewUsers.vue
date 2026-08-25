@@ -1,5 +1,6 @@
 <template>
   <div class="panel p-4">
+    <!-- 🎉 为庆祝装饰性 emoji（非功能图标位），无对应 lucide 映射，按保留例外处理（UI 升级阶段2） -->
     <h4 class="text-xs text-zinc-500 font-medium mb-3 px-1">🎉 欢迎新用户 🎉</h4>
     <!-- 4 列 × 2 排，最多 8 个最新注册用户 -->
     <div class="grid grid-cols-4 gap-x-1 gap-y-2">

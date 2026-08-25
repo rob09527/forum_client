@@ -2,7 +2,7 @@
   <div>
     <p class="text-sm text-zinc-600 mb-3">
       选择本地头像（{{ styles.length }} 个风格 × {{ perStyle }} 个）
-      <span class="text-xs text-zinc-400">· 🔒 为付费头像，点击前往商城解锁</span>
+      <span class="inline-flex items-center gap-0.5 text-xs text-zinc-400">· <AppIcon name="lock" :size="11" /> 为付费头像，点击前往商城解锁</span>
     </p>
 
     <!-- 风格分类：点击展开该风格的 20 个头像 -->
@@ -44,7 +44,7 @@
           v-if="isPaid(expandedStyle, n)"
           class="absolute inset-x-0 bottom-0 rounded-b-md bg-black/60 text-white text-[10px] py-0.5 flex items-center justify-center gap-0.5"
         >
-          🔒 {{ priceOf(expandedStyle, n) }}
+          <AppIcon name="lock" :size="10" /> {{ priceOf(expandedStyle, n) }}
         </span>
       </button>
     </div>
