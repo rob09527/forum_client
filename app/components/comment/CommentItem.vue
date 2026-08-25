@@ -6,13 +6,17 @@
       </NuxtLink>
 
       <div class="flex-1 min-w-0">
-        <!-- 作者信息行 -->
+        <!-- 作者信息行：全站统一用户名渲染（装饰自动生效） -->
         <div class="flex items-center gap-2 flex-wrap">
-          <span class="text-sm text-zinc-800 font-medium">{{ comment.author.username }}</span>
-          <span class="text-[10px] px-1.5 py-0.5 rounded font-medium" :class="levelBadgeClass">
-            {{ levelLabel }}
-          </span>
+          <UsernameText :author="comment.author" />
           <span v-if="comment.floor" class="text-xs text-zinc-500">#{{ comment.floor }}F</span>
+          <!-- 已采纳回答标记 [3.5]：绿色勾 + 实发金额 -->
+          <span
+            v-if="isAccepted"
+            class="inline-flex items-center gap-1 text-xs text-emerald-600 font-medium"
+          >
+            <AppIcon name="check-circle" :size="14" /> 已采纳 · 获得 {{ bountyPayout }}🍗
+          </span>
           <span class="text-xs text-zinc-600">{{ timeAgo }}</span>
         </div>
 
@@ -24,34 +28,50 @@
           <MarkdownEditor v-model="editContent" toolbar="compact" :height="160" />
           <div class="flex gap-2 mt-1.5">
             <button
-              class="text-xs px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
+              class="btn btn-primary text-xs px-3 py-1"
               :disabled="editSubmitting"
               @click="saveEdit"
             >
               {{ editSubmitting ? '保存中…' : '保存' }}
             </button>
-            <button class="text-xs px-3 py-1 text-zinc-600 hover:text-zinc-900" @click="editing = false">取消</button>
+            <button class="btn btn-ghost text-xs px-3 py-1" @click="editing = false">取消</button>
           </div>
         </div>
 
         <!-- 操作行 -->
         <div class="flex items-center gap-4 mt-2">
+          <!-- 悬赏采纳（发起人视角，仅顶层回答，不含发起人自答；不可逆，二次确认）[1.6.5] -->
           <button
-            class="text-xs text-zinc-500 hover:text-blue-700 transition-colors"
+            v-if="isBountyAuthor && !isAccepted && comment.parentId == null && comment.author.id !== user?.id"
+            class="text-xs text-emerald-600 hover:text-emerald-700 transition-colors font-medium"
+            @click="showAcceptConfirm = true"
+          >
+            <AppIcon name="check-circle" :size="13" /> 采纳
+          </button>
+          <button
+            class="text-xs text-zinc-500 hover:text-blue-700 transition-colors inline-flex items-center gap-1"
             :disabled="liking"
             @click="toggleLike"
           >
-            👍 {{ likeCount }}
+            <AppIcon name="thumbs-up" :size="13" /> {{ likeCount }}
           </button>
-          <button class="text-xs text-zinc-500 hover:text-zinc-900 transition-colors" @click="startReply">
-            💬 回复
+          <!-- 评论打赏（轻量，不能赏自己）；🍗 为积分货币单位，保留 emoji -->
+          <button
+            v-if="!isAuthor"
+            class="text-xs text-zinc-500 hover:text-amber-700 transition-colors"
+            @click="openTip"
+          >
+            🍗 赏{{ tipCount ? ` ${tipCount}` : '' }}
+          </button>
+          <button class="text-xs text-zinc-500 hover:text-zinc-900 transition-colors inline-flex items-center gap-1" @click="startReply">
+            <AppIcon name="message-square" :size="13" /> 回复
           </button>
           <template v-if="isAuthor">
-            <button class="text-xs text-zinc-500 hover:text-zinc-900 transition-colors" @click="startEdit">
-              ✏️ 编辑
+            <button class="text-xs text-zinc-500 hover:text-zinc-900 transition-colors inline-flex items-center gap-1" @click="startEdit">
+              <AppIcon name="edit" :size="13" /> 编辑
             </button>
-            <button class="text-xs text-zinc-500 hover:text-red-600 transition-colors" @click="remove">
-              🗑 删除
+            <button class="text-xs text-zinc-500 hover:text-red-600 transition-colors inline-flex items-center gap-1" @click="remove">
+              <AppIcon name="trash" :size="13" /> 删除
             </button>
           </template>
         </div>
@@ -65,13 +85,13 @@
           ></MarkdownEditor>
           <div class="flex gap-2 mt-1.5">
             <button
-              class="text-xs px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
+              class="btn btn-primary text-xs px-3 py-1"
               :disabled="replySubmitting"
               @click="submitReply"
             >
               {{ replySubmitting ? '发送中…' : '发送' }}
             </button>
-            <button class="text-xs px-3 py-1 text-zinc-600 hover:text-zinc-900" @click="replying = false">取消</button>
+            <button class="btn btn-ghost text-xs px-3 py-1" @click="replying = false">取消</button>
           </div>
         </div>
       </div>
@@ -86,6 +106,36 @@
         @changed="emit('changed')"
       />
     </div>
+
+    <!-- 删除确认（统一弹窗封装，替代原生 confirm） -->
+    <ConfirmModal
+      v-model="showDeleteConfirm"
+      title="删除评论"
+      message="确定删除这条评论吗？删除后无法恢复。"
+      confirm-text="删除"
+      danger
+      :loading="deleting"
+      @confirm="doRemove"
+    />
+
+    <!-- 采纳确认（不可逆，统一弹窗封装）[1.6.5] -->
+    <ConfirmModal
+      v-model="showAcceptConfirm"
+      title="采纳该回答"
+      message="采纳后悬赏将立即结算给这位回答者，此操作不可撤销。确定采纳吗？"
+      confirm-text="采纳并结算"
+      :loading="accepting"
+      @confirm="doAccept"
+    />
+
+    <!-- 评论打赏弹窗 -->
+    <TipModal
+      v-model="tipOpen"
+      target-type="comment"
+      :target-id="comment.id"
+      :target-name="comment.author.username"
+      @tipped="onTipped"
+    />
   </div>
 </template>
 
@@ -93,18 +143,31 @@
 import type { CommentTreeItem } from '~/types'
 import { renderMarkdown } from '~/utils/markdown'
 import { useComments } from '~/composables/useComments'
+import { useBounty } from '~/composables/useBounty'
 import { extractErrorMessage } from '~/composables/api'
-import { useGameConfig } from '~/composables/useGameConfig'
 
-const props = defineProps<{ comment: CommentTreeItem }>()
+const props = defineProps<{
+  comment: CommentTreeItem
+  /** 悬赏帖发起人视角：顶层回答显示「采纳」按钮 [3.5] */
+  isBountyAuthor?: boolean
+  /** 本回答是否被采纳（详情 bountyAcceptedCommentId 命中，渲染已采纳标记） */
+  isAccepted?: boolean
+  /** 采纳实发金额（托管金额 − 手续费），已采纳标记展示用 */
+  bountyPayout?: number
+  /** Bounty 账本 ID（采纳端点用 Bounty.id 而非 post id，见详情页 [3.5]） */
+  bountyId?: number
+}>()
 
 const emit = defineEmits<{
   /** 评论树发生变化（新增/编辑/删除），父组件刷新列表 */
   changed: []
+  /** 采纳成功（发起人采纳回答），父组件刷新评论区 + 帖子状态 */
+  accepted: []
 }>()
 
 const { user, isLoggedIn, openLogin } = useAuth()
 const { createComment, updateComment, removeComment, likeComment } = useComments()
+const { accept: acceptAnswer } = useBounty()
 const toast = useToast()
 
 // 后端只返回两级树：顶层楼层的 replies 是 CommentItem（无嵌套 replies）。
@@ -117,12 +180,42 @@ watch(() => props.comment.likeCount, (v) => { likeCount.value = v })
 
 const isAuthor = computed(() => !!user.value && user.value.id === props.comment.author.id)
 
-// 等级名/徽章来自后台配置，未加载时回退静态映射
-const { levelName, levelBadgeClass: badgeFor } = useGameConfig()
-const levelLabel = computed(() => levelName(props.comment.author.level))
-const levelBadgeClass = computed(() => badgeFor(props.comment.author.level))
-
 const timeAgo = useTimeAgo(() => new Date(props.comment.createdAt))
+
+// ── 悬赏采纳（发起人视角） ──
+const showAcceptConfirm = ref(false)
+const accepting = ref(false)
+async function doAccept() {
+  if (!props.bountyId) return
+  accepting.value = true
+  try {
+    await acceptAnswer(props.bountyId, props.comment.id)
+    showAcceptConfirm.value = false
+    emit('accepted')
+  } catch (err: any) {
+    toast.add({ title: extractErrorMessage(err, '采纳失败'), color: 'error' })
+  } finally {
+    accepting.value = false
+  }
+}
+
+// ── 评论打赏（轻量计数：本地点赞式回显，父级刷新时再同步） ──
+const tipCount = ref(props.comment.tipCount ?? 0)
+watch(() => props.comment.tipCount, (v) => { tipCount.value = v ?? 0 })
+
+const tipOpen = ref(false)
+function openTip() {
+  if (!isLoggedIn.value) {
+    openLogin()
+    return
+  }
+  tipOpen.value = true
+}
+
+/** 打赏成功：本地计数 +1（金额后端已扣，余额经铁律同步） */
+function onTipped() {
+  tipCount.value += 1
+}
 
 // ── 点赞 ──
 const liking = ref(false)
@@ -194,11 +287,24 @@ async function saveEdit() {
   }
 }
 
-// ── 删除 ──
+// ── 删除（统一确认弹窗） ──
+const showDeleteConfirm = ref(false)
+const deleting = ref(false)
+
 function remove() {
-  if (!confirm('确定删除这条评论吗？')) return
-  removeComment(props.comment.id)
-    .then(() => emit('changed'))
-    .catch((err: any) => toast.add({ title: extractErrorMessage(err, '删除失败'), color: 'error' }))
+  showDeleteConfirm.value = true
+}
+
+async function doRemove() {
+  deleting.value = true
+  try {
+    await removeComment(props.comment.id)
+    showDeleteConfirm.value = false
+    emit('changed')
+  } catch (err: any) {
+    toast.add({ title: extractErrorMessage(err, '删除失败'), color: 'error' })
+  } finally {
+    deleting.value = false
+  }
 }
 </script>

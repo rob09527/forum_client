@@ -4,8 +4,8 @@
     <div class="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-zinc-200/70 to-transparent" aria-hidden="true" />
     <!-- ====== 用户卡片：未登录 ====== -->
     <div v-if="!isLoggedIn" class="panel p-5 text-center">
-      <div class="w-14 h-14 rounded-full bg-zinc-200 mx-auto mb-3 flex items-center justify-center text-2xl">
-        👤
+      <div class="w-14 h-14 rounded-full bg-zinc-200 mx-auto mb-3 flex items-center justify-center text-zinc-500">
+        <AppIcon name="user" :size="28" />
       </div>
       <p class="text-sm text-zinc-600 mb-3">登录后享受完整功能</p>
       <div class="flex gap-2">
@@ -23,16 +23,15 @@
       <div class="flex items-center gap-3 mb-3">
         <Avatar :username="user?.username" :avatar="user?.avatar" size="lg" />
         <div class="flex-1 min-w-0">
-          <p class="text-sm font-medium text-zinc-800 truncate">{{ user?.username }}</p>
-          <span class="text-[10px] px-1.5 py-0.5 rounded font-medium" :class="levelBadgeClass">
-            {{ levelLabel }}
-          </span>
+          <!-- 全站统一用户名渲染（已登录区块 user 恒非空，装饰自动生效） -->
+          <UsernameText :author="user!" size="sm" class="min-w-0" />
         </div>
       </div>
       <!-- 积分 -->
       <div class="flex items-center gap-3 text-xs text-zinc-500 mb-3 px-1">
+        <!-- 🍗 为积分货币单位（全站统一 amber），保留 emoji；⭐ 星标换线性 SVG -->
         <span class="flex items-center gap-1"><span class="text-amber-600">🍗</span> {{ user?.points ?? 0 }}</span>
-        <span class="flex items-center gap-1"><span class="text-yellow-600">⭐</span> {{ user?.stars ?? 0 }}</span>
+        <span class="flex items-center gap-1"><span class="text-yellow-600"><AppIcon name="star" :size="12" /></span> {{ user?.stars ?? 0 }}</span>
       </div>
       <button
         class="w-full py-1.5 text-sm bg-zinc-200 hover:bg-zinc-200 text-zinc-700 rounded-md transition-colors"
@@ -52,19 +51,27 @@
         to="/post/new"
         class="flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-md transition-colors w-full text-left"
       >
-        <span>✏️</span> 发布新帖
+        <AppIcon name="edit" :size="14" /> 发布新帖
       </NuxtLink>
       <NuxtLink
         to="/my/posts"
         class="flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-md transition-colors w-full text-left"
       >
-        <span>📝</span> 我的帖子
+        <AppIcon name="file-text" :size="14" /> 我的帖子
+      </NuxtLink>
+      <NuxtLink
+        to="/shop"
+        class="flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-md transition-colors w-full text-left"
+      >
+        <AppIcon name="shopping-cart" :size="14" /> 积分商城
       </NuxtLink>
     </div>
 
     <!-- 热门帖子 -->
     <div class="panel p-4">
-      <h4 class="text-xs text-zinc-500 font-medium mb-2 px-1">🔥 热门帖子</h4>
+      <h4 class="text-xs text-zinc-500 font-medium mb-2 px-1 flex items-center gap-1">
+        <span class="text-amber-500"><AppIcon name="flame" :size="13" /></span> 热门帖子
+      </h4>
       <div class="space-y-1">
         <NuxtLink
           v-for="(hp, i) in hotPosts"
@@ -91,7 +98,6 @@
 <script setup lang="ts">
 import type { NewUser } from '~/types'
 import { useAdverts } from '~/composables/useAdverts'
-import { useGameConfig } from '~/composables/useGameConfig'
 
 defineProps<{
   hotPosts: { id: number; title: string }[]
@@ -104,8 +110,4 @@ const { user, isLoggedIn, logout, openLogin, openRegister } = useAuth()
 const { adverts } = useAdverts()
 const sidebarAds = computed(() => adverts.value.filter((a) => a.position === 'sidebar').slice(0, 10))
 
-// 等级名/徽章来自后台配置（GET /api/config/game），配置未加载时回退静态映射
-const { levelName, levelBadgeClass: badgeFor } = useGameConfig()
-const levelLabel = computed(() => levelName(user.value?.level))
-const levelBadgeClass = computed(() => badgeFor(user.value?.level))
 </script>

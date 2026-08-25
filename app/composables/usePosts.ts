@@ -14,6 +14,8 @@ export interface PostListQuery {
   /** 按作者 ID 过滤（「我的帖子」页用） */
   authorId?: number
   sort?: 'latest' | 'hot'
+  /** 悬赏筛选：悬赏 tab 传 'escrow' 只列待解决 [1.6.6] */
+  bountyStatus?: 'escrow' | 'settled' | 'refunded'
   page?: number
   pageSize?: number
 }
@@ -24,6 +26,8 @@ export interface PostInput {
   content: string
   category: string
   tags?: string[]
+  /** 悬赏金额：传了即为悬赏帖（发布时立即托管扣除）[1.6.4] */
+  bountyAmount?: number
 }
 
 /**

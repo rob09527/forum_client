@@ -63,6 +63,36 @@
         </div>
       </div>
 
+      <!-- 悬赏问答 [1.6.4][3.5]：发布时托管扣款 → 采纳后发给回答者 → 超时自动判给最高赞。
+           仅发帖可设（编辑不可改，避免改动既有悬赏帖金额破坏账务一致性） -->
+      <div v-if="!isEdit" class="bg-amber-500/5 border border-amber-500/20 rounded-md px-4 py-3">
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+          <input v-model="bountyEnabled" type="checkbox" class="accent-amber-500 w-4 h-4" />
+          <span class="text-sm text-zinc-700">设为悬赏帖</span>
+          <span class="text-xs text-zinc-500">让优质回答赢走你的鸡腿</span>
+        </label>
+
+        <!-- 金额 + 余额 + 前端即时校验（后端 service 还会按 config:bounty 复检） -->
+        <div v-if="bountyEnabled" class="mt-3 flex items-center gap-3 flex-wrap">
+          <input
+            v-model.number="bountyAmount"
+            type="number"
+            step="1"
+            :min="bountyConfig.amountMin"
+            :max="bountyConfig.amountMax"
+            class="w-32 bg-white border border-zinc-200 rounded-md px-3 py-1.5 text-sm text-zinc-800 focus:outline-none focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/30"
+            placeholder="金额"
+          />
+          <span class="text-sm text-zinc-600">🍗 <span class="font-mono tabular-nums">{{ balance }}</span> 可用</span>
+          <span v-if="bountyError" class="text-xs text-red-600">{{ bountyError }}</span>
+        </div>
+        <!-- 产品 1.6.4 硬性要求：最后一句必须前置告知（紧迫感 + 避免结算争议） -->
+        <p v-if="bountyEnabled" class="text-xs text-zinc-500 mt-2 leading-5">
+          ⓘ 发布后立即扣除。采纳答案后发放给回答者；
+          {{ bountyConfig.timeoutDays }} 天内未采纳，将自动判给最高赞回答。
+        </p>
+      </div>
+
       <!-- 正文（完整 Markdown 编辑器：工具栏 + 图片上传 + 表情） -->
       <div>
         <label class="block text-sm text-zinc-600 mb-1.5">正文</label>
@@ -99,6 +129,8 @@
 <script setup lang="ts">
 import type { PostDetail } from '~/types'
 import { usePosts } from '~/composables/usePosts'
+import { useGameConfig } from '~/composables/useGameConfig'
+import { usePoints } from '~/composables/usePoints'
 import { extractErrorMessage } from '~/composables/api'
 import { subTags as fallbackTags } from '~/constants/categories'
 
@@ -117,6 +149,8 @@ const tagPool = computed<string[]>(() => {
 })
 const { isLoggedIn, openLogin } = useAuth()
 const { createPost, updatePost } = usePosts()
+const { bountyConfig } = useGameConfig()
+const { balance } = usePoints()
 
 const isEdit = computed(() => !!props.post)
 
@@ -127,6 +161,21 @@ const content = ref(props.post?.content ?? '')
 const tags = ref<string[]>([...(props.post?.tags ?? [])])
 const submitting = ref(false)
 const error = ref('')
+
+// ── 悬赏问答 [1.6.4][3.5]：开关 + 金额；前端即时校验（金额区间/余额），后端按 config:bounty 复检 ──
+const bountyEnabled = ref(false)
+const bountyAmount = ref<number | null>(null)
+const bountyError = computed(() => {
+  if (!bountyEnabled.value) return ''
+  const n = bountyAmount.value
+  if (n == null || !Number.isFinite(n)) {
+    return `请输入悬赏金额（${bountyConfig.value.amountMin}~${bountyConfig.value.amountMax}🍗）`
+  }
+  if (n < bountyConfig.value.amountMin) return `最少 ${bountyConfig.value.amountMin}🍗`
+  if (n > bountyConfig.value.amountMax) return `最多 ${bountyConfig.value.amountMax}🍗`
+  if (n > balance.value) return `余额不足，还差 ${n - balance.value}🍗`
+  return ''
+})
 
 // ── 标签操作 ──
 function removeTag(tag: string) {
@@ -193,6 +242,10 @@ async function submit() {
     error.value = '正文至少 10 个字符'
     return
   }
+  if (bountyEnabled.value && bountyError.value) {
+    error.value = bountyError.value
+    return
+  }
 
   if (!isLoggedIn.value) {
     openLogin()
@@ -212,6 +265,10 @@ async function submit() {
       content: content.value.trim(),
       category: category.value,
       tags: tags.value,
+      // 悬赏开关打开且金额合法 → 随 PostInput 传 bountyAmount（后端托管扣款建 Bounty）[3.5]
+      ...(bountyEnabled.value && bountyAmount.value
+        ? { bountyAmount: Math.floor(bountyAmount.value) }
+        : {}),
     }
     const post = props.post
       ? await updatePost(props.post.id, input)

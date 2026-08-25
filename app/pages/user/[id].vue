@@ -43,7 +43,16 @@
           </div>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 flex-wrap">
-              <span class="text-lg font-semibold text-zinc-900">{{ profile.username }}</span>
+              <!-- 全站统一用户名渲染（装饰自动生效；他人资料装饰同样展示） -->
+              <UsernameText :author="profile" size="lg" />
+              <!-- 修改用户名（仅本人视角，改名道具 [1.4.3][3.6]） -->
+              <button
+                v-if="isOwnProfile"
+                class="text-xs px-3 py-1 rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition-colors"
+                @click="openRename"
+              >
+                ✏️ 修改用户名
+              </button>
               <!-- 关注按钮（仅他人视角） -->
               <button
                 v-if="!isOwnProfile"
@@ -117,30 +126,48 @@
         </div>
       </div>
 
-      <!-- 头像选择弹窗 -->
-      <Teleport to="body">
-        <Transition name="modal">
-          <div
-            v-if="showAvatarPicker"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-            @click.self="showAvatarPicker = false"
-          >
-            <div class="bg-white border border-zinc-200 rounded-xl p-6 w-full max-w-lg mx-4 shadow-2xl">
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-base font-semibold text-zinc-800">更换头像</h3>
-                <button
-                  class="text-zinc-500 hover:text-zinc-900 transition-colors text-lg leading-none"
-                  @click="showAvatarPicker = false"
-                >✕</button>
-              </div>
-              <AvatarPicker
-                :current-avatar="profile?.avatar ?? ''"
-                @select="handleAvatarSelect"
-              />
-            </div>
+      <!-- 头像选择弹窗（统一弹窗封装） -->
+      <AppModal v-model="showAvatarPicker" title="更换头像" width="lg">
+        <AvatarPicker
+          :current-avatar="profile?.avatar ?? ''"
+          @select="handleAvatarSelect"
+        />
+      </AppModal>
+
+      <!-- 改名弹窗（统一弹窗封装；输入 + 实时唯一性 + 消耗提示）[1.4.3][3.6] -->
+      <AppModal v-model="showRename" title="修改用户名" width="md">
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm text-zinc-600 mb-1.5">新用户名</label>
+            <input
+              v-model="renameName"
+              type="text"
+              maxlength="20"
+              placeholder="3~20 个字符"
+              class="w-full bg-white border border-zinc-200 rounded-md px-3 py-2 text-sm text-zinc-800 placeholder-zinc-600 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30"
+              @input="onRenameInput"
+            />
+            <p class="text-xs mt-1" :class="renameHint.class">{{ renameHint.text }}</p>
           </div>
-        </Transition>
-      </Teleport>
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-zinc-600">
+              消耗 <span class="text-amber-600 font-medium">🍗 {{ renamePrice }}</span>，
+              当前余额 <span class="font-mono tabular-nums text-zinc-700">{{ balance }}</span>
+            </span>
+            <span v-if="balance < renamePrice" class="text-xs text-red-600">余额不足</span>
+          </div>
+          <div class="flex justify-end gap-2 pt-1">
+            <button class="px-4 py-1.5 text-sm text-zinc-600 hover:text-zinc-900" @click="showRename = false">取消</button>
+            <button
+              class="px-4 py-1.5 text-sm bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white rounded-md transition-colors"
+              :disabled="!renameReady || renaming"
+              @click="doRename"
+            >
+              {{ renaming ? '提交中…' : `确认改名 · ${renamePrice}🍗` }}
+            </button>
+          </div>
+        </div>
+      </AppModal>
 
       <!-- 积分流水（仅本人可见） -->
       <div v-if="isOwnProfile" class="panel p-6">
@@ -177,11 +204,14 @@
 </template>
 
 <script setup lang="ts">
+
 import type { PointLogItem, UserProfile } from '~/types'
 import { PointTypeLabel } from '~/types'
 import { formatCount } from '~/utils/format'
 import { useUserProfile } from '~/composables/useUserProfile'
 import { useFollow } from '~/composables/useFollow'
+import { useRename } from '~/composables/useRename'
+import { usePoints } from '~/composables/usePoints'
 import { extractErrorMessage } from '~/composables/api'
 import { useGameConfig } from '~/composables/useGameConfig'
 
@@ -210,6 +240,84 @@ watch(isLoggedIn, (v) => {
 
 // ── 头像选择 ──
 const showAvatarPicker = ref(false)
+
+// ── 改名道具 [1.4.3][3.6]：输入 + 实时唯一性检查（debounce）+ 消耗提示 ──
+const { rename, renamePrice, checkAvailable } = useRename()
+const { balance } = usePoints()
+
+const showRename = ref(false)
+const renameName = ref('')
+const renameChecking = ref(false)
+/** 实时唯一性结果：null=未检查/检查失败（提交时后端复检），true/false=可用/占用 */
+const renameAvailable = ref<boolean | null>(null)
+const renaming = ref(false)
+
+function openRename() {
+  renameName.value = profile.value?.username ?? ''
+  renameAvailable.value = null
+  showRename.value = true
+}
+
+/** 实时唯一性检查：300ms debounce，避免每次击键都打接口 */
+let renameTimer: ReturnType<typeof setTimeout> | undefined
+function onRenameInput() {
+  clearTimeout(renameTimer)
+  renameTimer = setTimeout(checkRenameName, 300)
+}
+async function checkRenameName() {
+  const name = renameName.value.trim()
+  if (name.length < 3 || name.length > 20) {
+    renameAvailable.value = null
+    return
+  }
+  renameChecking.value = true
+  try {
+    renameAvailable.value = await checkAvailable(name)
+  } catch {
+    renameAvailable.value = null // 检查接口失败不阻塞提交（后端复检兜底）
+  } finally {
+    renameChecking.value = false
+  }
+}
+
+const renameHint = computed(() => {
+  const name = renameName.value.trim()
+  if (name === (profile.value?.username ?? '')) {
+    return { text: '用户名未变化', class: 'text-zinc-400' }
+  }
+  if (name.length < 3 || name.length > 20) {
+    return { text: '用户名需 3~20 个字符', class: 'text-red-600' }
+  }
+  if (renameChecking.value) return { text: '检查中…', class: 'text-zinc-400' }
+  if (renameAvailable.value === false) return { text: '该用户名已被占用', class: 'text-red-600' }
+  if (renameAvailable.value === true) return { text: '该用户名可用 ✓', class: 'text-emerald-600' }
+  return { text: '输入后自动检查是否可用', class: 'text-zinc-400' }
+})
+
+const renameReady = computed(() => {
+  const name = renameName.value.trim()
+  return name.length >= 3 && name.length <= 20
+    && name !== (profile.value?.username ?? '')
+    && renameAvailable.value === true
+    && balance.value >= renamePrice.value
+})
+
+async function doRename() {
+  const name = renameName.value.trim()
+  renaming.value = true
+  try {
+    await rename(name)
+    showRename.value = false
+    // 资料卡用户名即时更新（authUser 已由 useRename 同步，全站响应式）
+    if (profile.value) profile.value = { ...profile.value, username: name }
+    toast.add({ title: '用户名已更新', color: 'success' })
+  } catch (err: any) {
+    // RENAME_COOLDOWN / USERNAME_TAKEN 后端分别给了明确中文文案，直接透出
+    toast.add({ title: extractErrorMessage(err, '改名失败'), color: 'error' })
+  } finally {
+    renaming.value = false
+  }
+}
 
 /** 当前用户是否在查看自己的资料 */
 const isOwnProfile = computed(() => isLoggedIn.value && user.value?.id === userId)
@@ -329,14 +437,3 @@ function logTime(iso: string): string {
   })
 }
 </script>
-
-<style scoped>
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.2s ease;
-}
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
-</style>

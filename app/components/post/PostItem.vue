@@ -10,7 +10,7 @@
       <NuxtLink :to="`/post/${post.id}`" class="flex-1 min-w-0 group">
         <!-- 标题 -->
         <h3 class="text-sm text-zinc-800 group-hover:text-blue-600 transition-colors leading-snug mb-1.5">
-          <span v-if="post.isPinned" class="text-emerald-600 mr-1">📌</span>
+          <span v-if="post.isPinned" class="text-emerald-600 mr-1 inline-flex align-middle"><AppIcon name="pin" :size="13" /></span>
           {{ post.title }}
         </h3>
         <!-- 元信息行 -->
@@ -18,20 +18,29 @@
           <span :class="['px-1.5 py-0.5 rounded text-xs font-medium whitespace-nowrap', badgeClass]">
             {{ categoryName(post.category) }}
           </span>
-          <span class="inline-flex items-center gap-1">
-            <span class="text-[11px]">👤</span>
-            <span class="text-zinc-600">{{ post.author.username }}</span>
+          <!-- 悬赏徽章 [3.5]：bountyAmount 非空 → 琥珀色金额徽章（与鸡腿语义一致）；终态补状态角标 -->
+          <span
+            v-if="post.bountyAmount != null"
+            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-amber-500/20 text-amber-600 whitespace-nowrap"
+            :title="post.bountyStatus === 'escrow' ? '悬赏待采纳' : BountyStatusLabel[post.bountyStatus!]"
+          >
+            <AppIcon name="coins" :size="12" /> {{ post.bountyAmount }}
+            <span v-if="post.bountyStatus && post.bountyStatus !== 'escrow'" class="font-normal">· {{ BountyStatusLabel[post.bountyStatus] }}</span>
           </span>
           <span class="inline-flex items-center gap-1">
-            <span class="text-[11px]">⏱</span>
+            <span class="text-zinc-400"><AppIcon name="user" :size="12" /></span>
+            <UsernameText :author="post.author" size="xs" />
+          </span>
+          <span class="inline-flex items-center gap-1">
+            <span class="text-zinc-400"><AppIcon name="clock" :size="12" /></span>
             <span>{{ timeText }}</span>
           </span>
           <span v-if="post.lastReplyUser" class="inline-flex items-center gap-1">
-            <span class="text-[11px]">💬</span>
+            <span class="text-zinc-400"><AppIcon name="message-square" :size="12" /></span>
             <span class="text-zinc-600">{{ post.lastReplyUser }}</span>
           </span>
           <span class="inline-flex items-center gap-1 ml-auto">
-            <span class="text-[11px]">👁</span>
+            <span class="text-zinc-400"><AppIcon name="eye" :size="12" /></span>
             <span class="font-mono text-xs text-zinc-500">{{ formatCount(post.viewCount) }}</span>
           </span>
         </div>
@@ -51,6 +60,7 @@
 
 <script setup lang="ts">
 import type { PostListItem } from '~/types'
+import { BountyStatusLabel } from '~/types'
 import { categoryBadge, categoryName } from '~/constants/categories'
 import { formatCount } from '~/utils/format'
 

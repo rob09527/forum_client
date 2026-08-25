@@ -3,7 +3,7 @@
     <!-- 首页小 tips 轮播：替代固定品牌标语，克制不占位，每 6s 换一条（§7.14） -->
     <ClientOnly>
       <div class="flex items-center gap-1.5 px-1 min-h-5">
-        <span class="text-xs text-zinc-400 leading-none" aria-hidden="true">✦</span>
+        <span class="text-zinc-400 leading-none" aria-hidden="true"><AppIcon name="sparkles" :size="12" /></span>
         <Transition name="tip" mode="out-in">
           <span :key="tipIndex" class="text-[13px] text-zinc-500 leading-5">{{ HOME_TIPS[tipIndex % HOME_TIPS.length] }}</span>
         </Transition>
@@ -101,6 +101,8 @@ function toggleTag(name: string) {
 }
 
 const sort = ref<'latest' | 'hot'>('latest')
+/** 悬赏筛选（PostList「💰 悬赏」tab 开启）：bountyStatus='escrow' 默认展示待解决 [1.6.6] */
+const bountyOnly = ref(false)
 const page = ref(1)
 const pageSize = 20
 
@@ -116,10 +118,11 @@ const { data, pending, error: dataError } = useAsyncData(
     category: category.value,
     tag: activeTag.value,
     sort: sort.value,
+    bountyStatus: bountyOnly.value ? 'escrow' : undefined,
     page: page.value,
     pageSize,
   }),
-  { watch: [category, activeTag, sort, page] }
+  { watch: [category, activeTag, sort, bountyOnly, page] }
 )
 
 // 客户端 hydration 时 payload 命中 → useAsyncData 不再执行 handler，
@@ -130,7 +133,14 @@ watch(data, (v) => {
 }, { immediate: true })
 
 function handleSortChange(newSort: string) {
-  sort.value = newSort as 'latest' | 'hot'
+  if (newSort === 'bounty') {
+    // 「悬赏」是筛选不是排序：切到最新排序 + 开 escrow 过滤，复用列表 [3.5]
+    bountyOnly.value = true
+    sort.value = 'latest'
+  } else {
+    bountyOnly.value = false
+    sort.value = newSort as 'latest' | 'hot'
+  }
   page.value = 1
 }
 

@@ -18,11 +18,11 @@
           <button
             v-for="t in tabs"
             :key="t.value"
-            class="px-3 py-1 text-xs rounded-md transition-colors"
+            class="px-3 py-1 text-xs rounded-md transition-colors inline-flex items-center gap-1"
             :class="activeTab === t.value ? 'bg-zinc-200 text-zinc-800' : 'text-zinc-600 hover:text-zinc-900'"
             @click="switchTab(t.value)"
           >
-            {{ t.label }}
+            <AppIcon :name="t.icon" :size="12" /> {{ t.label }}
           </button>
         </div>
 
@@ -55,12 +55,8 @@
             >
               <Avatar :username="u.username" :avatar="u.avatar" size="md" />
               <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2">
-                  <span class="text-sm text-zinc-800 truncate">{{ u.username }}</span>
-                  <span class="text-[10px] px-1.5 py-0.5 rounded font-medium" :class="levelBadge(u.level)">
-                    {{ levelName(u.level) }}
-                  </span>
-                </div>
+                <!-- 外层 NuxtLink 已跳转主页，link=false 避免嵌套 <a> -->
+                <UsernameText :author="u" size="sm" :link="false" class="min-w-0" />
               </div>
               <span class="text-xs text-zinc-500">主页 →</span>
             </NuxtLink>
@@ -77,19 +73,17 @@
 <script setup lang="ts">
 import type { FollowUserItem } from '~/types'
 import { useFollow } from '~/composables/useFollow'
-import { useGameConfig } from '~/composables/useGameConfig'
 
 const route = useRoute()
 const router = useRouter()
 const { isLoggedIn, openLogin } = useAuth()
-const { levelName, levelBadgeClass: badgeFor } = useGameConfig()
 
 const { feed, feedTotalPages, feedLoading, loadFeed, following, followingTotalPages, loadFollowing, followers, followersTotalPages, loadFollowers } = useFollow()
 
 const tabs = [
-  { label: '📡 动态', value: 'feed' },
-  { label: '👤 关注', value: 'following' },
-  { label: '👥 粉丝', value: 'followers' },
+  { label: '动态', value: 'feed', icon: 'rss' },
+  { label: '关注', value: 'following', icon: 'user' },
+  { label: '粉丝', value: 'followers', icon: 'users' },
 ]
 
 const activeTab = computed(() => {
@@ -143,6 +137,4 @@ function handlePageChange(newPage: number) {
 watch([isLoggedIn, activeTab], (v) => {
   if (v[0]) load()
 }, { immediate: true })
-
-const levelBadge = (level: string) => badgeFor(level)
 </script>

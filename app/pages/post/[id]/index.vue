@@ -46,6 +46,33 @@
           </NuxtLink>
         </div>
 
+        <!-- 悬赏横幅 [3.5]：标题下，金额 + 剩余时间 + 状态；托管中给发起人「取消悬赏」 -->
+        <div
+          v-if="post.bountyStatus"
+          class="mb-4 px-4 py-3 rounded-md border text-sm flex items-center gap-2 flex-wrap"
+          :class="bountyBannerClass"
+        >
+          <span class="font-medium text-amber-700">💰 {{ post.bountyAmount }}🍗 悬赏</span>
+          <span class="text-xs px-1.5 py-0.5 rounded bg-white/70 font-medium text-zinc-600">
+            {{ BountyStatusLabel[post.bountyStatus] }}
+          </span>
+          <template v-if="post.bountyStatus === 'escrow'">
+            <span class="text-xs text-zinc-500 font-mono tabular-nums">剩余 {{ bountyCountdown.text }}</span>
+            <span class="text-xs text-zinc-500">{{ bountyConfig.timeoutDays }} 天未采纳将自动判给最高赞回答</span>
+            <button
+              v-if="isAuthor"
+              class="ml-auto text-xs text-zinc-500 hover:text-red-600 transition-colors"
+              @click="showCancelBounty = true"
+            >
+              取消悬赏
+            </button>
+          </template>
+          <span v-else-if="post.bountyStatus === 'settled'" class="text-xs text-emerald-600">
+            ✅ 回答者已获得 {{ bountyPayout }}🍗（已扣除 {{ bountyFeePct }}% 手续费）
+          </span>
+          <span v-else class="text-xs text-zinc-500">金额已全额退回发起人</span>
+        </div>
+
         <!-- 作者信息 -->
         <div class="flex items-center gap-3 pb-4 mb-4 border-b border-zinc-200">
           <NuxtLink :to="`/user/${post.author.id}`" class="shrink-0">
@@ -53,10 +80,8 @@
           </NuxtLink>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2">
-              <span class="text-sm font-medium text-zinc-800">{{ post.author.username }}</span>
-              <span class="text-[10px] px-1.5 py-0.5 rounded font-medium" :class="authorLevelClass">
-                {{ authorLevelLabel }}
-              </span>
+              <!-- 全站统一用户名渲染（装饰自动生效） -->
+              <UsernameText :author="post.author" />
             </div>
             <div class="flex items-center gap-2 text-xs text-zinc-500 mt-0.5">
               <span>发布于 {{ postTimeAgo }}</span>
@@ -74,6 +99,9 @@
         <!-- 正文（Markdown 渲染） -->
         <div class="text-[15px] leading-7 text-zinc-700 markdown-body" v-html="renderMarkdown(post.content)"></div>
 
+        <!-- 打赏汇总 [1.5.3]：🍗 N 人打赏 · 共 X（正文下方） -->
+        <PostTipSummary :post-id="post.id" :refresh-key="tipRefreshKey" />
+
         <!-- 操作行 -->
         <div class="flex items-center gap-3 mt-6 pt-4 border-t border-zinc-200">
           <button
@@ -89,6 +117,14 @@
             @click="toggleBookmarkClick"
           >
             🔖 {{ bookmarked ? '已收藏' : '收藏' }}
+          </button>
+          <!-- 打赏入口：不能赏自己 [CANNOT_TIP_SELF] -->
+          <button
+            v-if="!isAuthor"
+            class="flex items-center gap-1.5 px-4 py-1.5 text-sm rounded-md transition-colors bg-zinc-100 hover:bg-zinc-200 text-amber-700"
+            @click="tipOpen = true"
+          >
+            🍗 赏
           </button>
           <NuxtLink
             v-if="isAuthor"
@@ -106,6 +142,36 @@
           </button>
         </div>
       </article>
+
+      <!-- 删除确认（统一弹窗封装，替代原生 confirm） -->
+      <ConfirmModal
+        v-model="showDeleteConfirm"
+        title="删除帖子"
+        message="删除后帖子、评论和点赞都会被清除，此操作不可恢复。"
+        confirm-text="删除"
+        danger
+        :loading="deleting"
+        @confirm="doRemove"
+      />
+
+      <!-- 取消悬赏确认（统一弹窗封装；已有有效回答时后端拒绝）[1.6.2] -->
+      <ConfirmModal
+        v-model="showCancelBounty"
+        title="取消悬赏"
+        message="取消后托管金额将全额退回你的余额（已有有效回答时不可取消）。此操作不可逆，确定取消吗？"
+        confirm-text="取消悬赏"
+        :loading="cancelling"
+        @confirm="doCancelBounty"
+      />
+
+      <!-- 打赏弹窗 -->
+      <TipModal
+        v-model="tipOpen"
+        target-type="post"
+        :target-id="postId"
+        :target-name="tipTargetName"
+        @tipped="onTipped"
+      />
 
       <!-- 评论区 -->
       <section v-if="post" class="panel p-6">
@@ -132,12 +198,17 @@
 
         <!-- 评论列表 -->
         <div v-if="commentPending" class="py-6 text-center text-sm text-zinc-500">评论加载中…</div>
-        <div v-else-if="comments.length" class="divide-y divide-zinc-200/50">
+        <div v-else-if="orderedComments.length" class="divide-y divide-zinc-200/50">
           <CommentItem
-            v-for="c in comments"
+            v-for="c in orderedComments"
             :key="c.id"
             :comment="c"
+            :is-bounty-author="isAuthor && post.bountyStatus === 'escrow'"
+            :is-accepted="c.id === acceptedCommentId"
+            :bounty-payout="bountyPayout"
+            :bounty-id="post.bountyId ?? undefined"
             @changed="refresh"
+            @accepted="refresh"
           />
         </div>
         <div v-else class="py-10 text-center">
@@ -150,15 +221,18 @@
 </template>
 
 <script setup lang="ts">
-import type { PostDetail } from '~/types'
+import type { CommentTreeItem, PostDetail } from '~/types'
+import { BountyStatusLabel } from '~/types'
 import { categoryBadge, categoryName } from '~/constants/categories'
 import { renderMarkdown } from '~/utils/markdown'
 import { formatCount } from '~/utils/format'
 import { usePosts } from '~/composables/usePosts'
 import { useComments } from '~/composables/useComments'
 import { useBookmarks } from '~/composables/useBookmarks'
-import { extractErrorMessage } from '~/composables/api'
+import { useBounty } from '~/composables/useBounty'
+import { useBountyCountdown } from '~/composables/useBountyCountdown'
 import { useGameConfig } from '~/composables/useGameConfig'
+import { extractErrorMessage } from '~/composables/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -172,6 +246,8 @@ const { getPost, removePost, likePost, unlikePost } = usePosts()
 const { comments, loadComments, createComment } = useComments()
 const { toggleBookmark } = useBookmarks()
 const { user, isLoggedIn, openLogin } = useAuth()
+const { bountyConfig } = useGameConfig()
+const { cancel: cancelBounty } = useBounty()
 
 // ── 帖子数据（详情接口需登录；SSR 未登录 401 返回 null，登录后重拉） ──
 const { data: post, pending, refresh: refreshPost } = useAsyncData<PostDetail | null>(
@@ -252,14 +328,36 @@ async function toggleBookmarkClick() {
 // ── 作者权限 ──
 const isAuthor = computed(() => !!user.value && !!post.value && user.value.id === post.value.author.id)
 
+const showDeleteConfirm = ref(false)
+const deleting = ref(false)
+
 function remove() {
-  if (!confirm('删除后帖子、评论和点赞都会被清除，确定吗？')) return
-  removePost(postId)
-    .then(() => {
-      toast.add({ title: '帖子已删除', color: 'success' })
-      router.push('/')
-    })
-    .catch((err: any) => toast.add({ title: extractErrorMessage(err, '删除失败'), color: 'error' }))
+  showDeleteConfirm.value = true
+}
+
+// ── 打赏 ──
+const tipOpen = ref(false)
+/** 打赏成功 → 递增，触发 PostTipSummary 重新拉取 */
+const tipRefreshKey = ref(0)
+/** TipModal 目标名（post 在外层 v-else 链之外可为 null，守卫取值） */
+const tipTargetName = computed(() => post.value?.author.username ?? '')
+
+function onTipped() {
+  tipRefreshKey.value++
+}
+
+async function doRemove() {
+  deleting.value = true
+  try {
+    await removePost(postId)
+    showDeleteConfirm.value = false
+    toast.add({ title: '帖子已删除', color: 'success' })
+    router.push('/')
+  } catch (err: any) {
+    toast.add({ title: extractErrorMessage(err, '删除失败'), color: 'error' })
+  } finally {
+    deleting.value = false
+  }
 }
 
 // ── 评论区 ──
@@ -294,12 +392,60 @@ async function submitComment() {
   }
 }
 
-// ── 展示辅助 ──
-// 等级名/徽章来自后台配置，未加载时回退静态映射
-const { levelName, levelBadgeClass: badgeFor } = useGameConfig()
-const authorLevelClass = computed(() => badgeFor(post.value?.author.level))
-const authorLevelLabel = computed(() => levelName(post.value?.author.level))
+// ── 悬赏详情横幅 [3.5]：金额 + 剩余时间 + 状态；托管中给发起人「取消悬赏」 ──
+const bountyCountdown = useBountyCountdown(() => post.value?.bountyExpireAt)
+// 到 0 后端结算（server 60s 调度器）→ 拉一次详情刷新状态（bountyStatus 变 settled/refunded）
+watch(bountyCountdown.expired, (expired) => {
+  if (expired && post.value?.bountyStatus === 'escrow') refreshPost()
+})
 
+const bountyBannerClass = computed(() => {
+  switch (post.value?.bountyStatus) {
+    case 'escrow': return 'bg-amber-500/10 border-amber-500/30'
+    case 'settled': return 'bg-emerald-500/10 border-emerald-500/30'
+    default: return 'bg-zinc-500/5 border-zinc-300'
+  }
+})
+
+/** 采纳实发金额 = 托管金额 − 手续费（与后端同算法，对账口径见审计 B2） */
+const bountyPayout = computed(() => {
+  const amt = post.value?.bountyAmount
+  if (!amt) return 0
+  return Math.floor(amt * (1 - bountyConfig.value.feeRate))
+})
+const bountyFeePct = computed(() => Math.round(bountyConfig.value.feeRate * 100))
+
+const showCancelBounty = ref(false)
+const cancelling = ref(false)
+async function doCancelBounty() {
+  if (!post.value?.bountyId) return
+  cancelling.value = true
+  try {
+    await cancelBounty(post.value.bountyId)
+    showCancelBounty.value = false
+    toast.add({ title: '悬赏已取消，托管金已退回', color: 'success' })
+    await refreshPost()
+  } catch (err: any) {
+    toast.add({ title: extractErrorMessage(err, '取消失败'), color: 'error' })
+    await refreshPost() // 可能因已有有效回答被拒 → 刷新让横幅反映最新
+  } finally {
+    cancelling.value = false
+  }
+}
+
+// ── 采纳置顶 [3.5]：被采纳的回答排到评论区最前（其余保持原序，稳定排序） ──
+const acceptedCommentId = computed(() => post.value?.bountyAcceptedCommentId ?? null)
+const orderedComments = computed<CommentTreeItem[]>(() => {
+  const acc = acceptedCommentId.value
+  if (!acc) return comments.value
+  return [...comments.value].sort((a, b) => {
+    if (a.id === acc) return -1
+    if (b.id === acc) return 1
+    return 0
+  })
+})
+
+// ── 展示辅助 ──
 const postTimeAgo = useTimeAgo(() => new Date(post.value?.createdAt ?? ''))
 const editTimeAgo = useTimeAgo(() => new Date(post.value?.updatedAt ?? ''))
 // 距创建超过 1 秒才算「编辑过」，过滤建帖时的自动写入噪声

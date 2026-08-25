@@ -7,6 +7,7 @@ import EmojiToolbarButton from './EmojiToolbarButton.vue'
 import ColorToolbarButton from './ColorToolbarButton.vue'
 import { useUpload } from '~/composables/useUpload'
 import { useAuth } from '~/composables/useAuth'
+import { useQuota } from '~/composables/useQuota'
 import { useUserSearch } from '~/composables/useUserSearch'
 import { mentionCompletion } from '~/utils/editor/mention-completion'
 import { extractErrorMessage } from '~/composables/api'
@@ -81,6 +82,34 @@ const { isLoggedIn, openLogin } = useAuth()
 const toast = useToast()
 const { uploadImage } = useUpload()
 
+// ── 上传扩容引导 [1.4.4][3.6]：总量达标 → 弹「扩容 +NMB 需 M🍗」，确认后扩容并重试上传 ──
+const { buy: buyQuota, quotaPrice, quotaPerPurchaseMB } = useQuota()
+const showQuotaConfirm = ref(false)
+const quotaSubmitting = ref(false)
+/** 待扩容后重试的整批文件（含回调），扩容成功即重新上传 */
+const quotaRetry = ref<{ files: File[]; callback: (urls: string[]) => void } | null>(null)
+
+function isQuotaExceeded(err: unknown): boolean {
+  return (err as { data?: { error?: { code?: string } } })?.data?.error?.code === 'UPLOAD_USER_TOTAL_EXCEEDED'
+}
+
+async function doBuyQuota() {
+  quotaSubmitting.value = true
+  try {
+    await buyQuota() // 内部按铁律 [3.1] 同步余额
+    showQuotaConfirm.value = false
+    toast.add({ title: `扩容成功 +${quotaPerPurchaseMB.value}MB（永久额度）`, color: 'success' })
+    // 扩容后整批重传（useQuota 已同步余额；fail 时 toast 引导即可）
+    const retry = quotaRetry.value
+    quotaRetry.value = null
+    if (retry) await handleUploadImg(retry.files, retry.callback)
+  } catch (err: any) {
+    toast.add({ title: extractErrorMessage(err, '扩容失败'), color: 'error' })
+  } finally {
+    quotaSubmitting.value = false
+  }
+}
+
 async function handleUploadImg(files: File[], callback: (urls: string[]) => void) {
   if (!isLoggedIn.value) {
     openLogin()
@@ -94,6 +123,12 @@ async function handleUploadImg(files: File[], callback: (urls: string[]) => void
       const { path } = await uploadImage(file)
       urls.push(path)
     } catch (err: unknown) {
+      // 上传总量达标 → 扩容引导（中断本批，扩容成功后整批重试，不静默丢图）
+      if (isQuotaExceeded(err)) {
+        quotaRetry.value = { files, callback }
+        showQuotaConfirm.value = true
+        return
+      }
       toast.add({ title: extractErrorMessage(err, '图片上传失败'), color: 'error' })
     }
   }
@@ -116,5 +151,15 @@ async function handleUploadImg(files: File[], callback: (urls: string[]) => void
     :style="{ height: `${height}px`, borderRadius: '0.5rem' }"
     class="rounded-md overflow-hidden"
     @on-upload-img="handleUploadImg"
+  />
+
+  <!-- 上传扩容引导（统一弹窗封装）[1.4.4][3.6]：Teleport 到 body，不影响编辑器布局 -->
+  <ConfirmModal
+    v-model="showQuotaConfirm"
+    title="上传空间已满"
+    :message="`当前上传总量已达上限。扩容 +${quotaPerPurchaseMB}MB 需消耗 ${quotaPrice}🍗（永久额度），扩容后可继续上传。确定扩容吗？`"
+    confirm-text="扩容并重试"
+    :loading="quotaSubmitting"
+    @confirm="doBuyQuota"
   />
 </template>

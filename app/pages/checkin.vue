@@ -2,7 +2,7 @@
   <div class="max-w-3xl mx-auto space-y-4">
     <!-- 未登录提示 -->
     <div v-if="!isLoggedIn" class="panel p-10 text-center">
-      <p class="text-lg text-zinc-700 mb-2">📅 每日签到</p>
+      <p class="text-lg text-zinc-700 mb-2 inline-flex items-center gap-1.5"><AppIcon name="calendar" :size="17" /> 每日签到</p>
       <p class="text-sm text-zinc-500 mb-4">登录后才能签到打卡</p>
       <button
         class="px-5 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
@@ -16,7 +16,9 @@
       <!-- 顶部统计 -->
       <div class="panel p-6">
         <div class="flex items-center justify-between mb-5">
-          <h1 class="text-lg font-semibold text-zinc-900">📅 每日签到</h1>
+          <h1 class="text-lg font-semibold text-zinc-900 inline-flex items-center gap-1.5">
+            <AppIcon name="calendar" :size="18" /> 每日签到
+          </h1>
           <button
             class="px-4 py-1.5 text-sm rounded-md transition-colors"
             :class="status.checkedToday
@@ -77,7 +79,17 @@
             :class="cellClass(cell)"
           >
             <template v-if="cell.day !== null">
-              {{ cell.day }}
+              <div class="flex flex-col items-center gap-0.5">
+                <span>{{ cell.day }}</span>
+                <!-- 补签入口 [1.4.2]：当前月「昨天」未签时显示，一步完成（消耗 makeupPrice🍗） -->
+                <button
+                  v-if="cell.isYesterday && !cell.checked"
+                  class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 hover:bg-amber-500/30 transition-colors"
+                  @click="showMakeupConfirm = true"
+                >
+                  补签
+                </button>
+              </div>
             </template>
           </div>
         </div>
@@ -99,8 +111,19 @@
           <li>③ 连续满 {{ cfg.milestoneEvery }} 天里程碑：第 {{ cfg.milestoneEvery }} / {{ cfg.milestoneEvery * 2 }} / … 天额外 +{{ cfg.milestoneBonus }}（第 {{ cfg.milestoneEvery }} 天当天 = {{ cfg.base }} + {{ milestoneStreak }} + {{ cfg.milestoneBonus }} = {{ milestoneDayTotal }}）</li>
           <li>④ 断签连续天数归零，但累计签到天数保留</li>
           <li>⑤ 每人每天限签 1 次</li>
+          <li>⑥ 漏签可补签：消耗 {{ makeupPrice }}🍗 补回昨天（前天已签才可补，当月有限次）</li>
         </ul>
       </div>
+
+      <!-- 补签确认（统一弹窗封装，一步完成）[1.4.2] -->
+      <ConfirmModal
+        v-model="showMakeupConfirm"
+        title="补签昨天"
+        :message="`补签昨天需消耗 ${makeupPrice}🍗，将补回昨天的签到记录（含连续天数）。确定补签吗？`"
+        confirm-text="补签"
+        :loading="makeupSubmitting"
+        @confirm="doMakeup"
+      />
     </template>
   </div>
 </template>
@@ -110,9 +133,11 @@ import type { CheckinStatus } from '~/types'
 import { dateKey, monthKey } from '~/utils/date'
 import { extractErrorMessage } from '~/composables/api'
 import { useGameConfig } from '~/composables/useGameConfig'
+import { useMakeup } from '~/composables/useMakeup'
 
 const { isLoggedIn, openLogin, restoreSession } = useAuth()
 const { getStatus, checkin: submitCheckin } = useCheckin()
+const { makeup, makeupPrice } = useMakeup()
 const toast = useToast()
 
 const weekdays = ['一', '二', '三', '四', '五', '六', '日']
@@ -130,6 +155,8 @@ const milestoneDayTotal = computed(() => cfg.value.base + milestoneStreak.value 
 // 锚点：今天固定（避免跨天渲染跳动）
 const today = new Date()
 const todayKey = dateKey(today)
+/** 「昨天」固定锚点（补签入口 [1.4.2]：只补昨天） */
+const yesterdayKey = dateKey(new Date(today.getTime() - 86400_000))
 
 const status = ref<CheckinStatus>({
   streak: 0,
@@ -168,9 +195,11 @@ const cells = computed(() => {
     day: number | null
     checked: boolean
     isToday: boolean
+    /** 昨天（补签入口只挂在当前月「昨天」格 [1.4.2]） */
+    isYesterday: boolean
   }[] = []
   for (let i = 0; i < leading; i++) {
-    cells.push({ key: `pad-${i}`, date: '', day: null, checked: false, isToday: false })
+    cells.push({ key: `pad-${i}`, date: '', day: null, checked: false, isToday: false, isYesterday: false })
   }
   for (let d = 1; d <= daysInMonth; d++) {
     const date = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
@@ -180,6 +209,7 @@ const cells = computed(() => {
       day: d,
       checked: checked.has(date),
       isToday: date === todayKey,
+      isYesterday: date === yesterdayKey,
     })
   }
   return cells
@@ -233,6 +263,27 @@ async function doCheckin() {
     await loadMonth(viewMonth.value)
   } finally {
     submitting.value = false
+  }
+}
+
+// ── 补签（一步完成；useMakeup 内部已按铁律 [3.1] 同步余额）[1.4.2] ──
+const showMakeupConfirm = ref(false)
+const makeupSubmitting = ref(false)
+async function doMakeup() {
+  makeupSubmitting.value = true
+  try {
+    await makeup()
+    showMakeupConfirm.value = false
+    toast.add({ title: `补签成功，已补回昨天（消耗 ${makeupPrice.value}🍗）`, color: 'success' })
+    monthCache.clear() // 状态变了，清缓存重新拉
+    await Promise.all([loadMonth(viewMonth.value), restoreSession()])
+  } catch (err: any) {
+    // MAKEUP_UNAVAILABLE / MAKEUP_LIMIT_EXCEEDED：toast 说明原因
+    toast.add({ title: extractErrorMessage(err, '补签失败'), color: 'error' })
+    monthCache.clear()
+    await loadMonth(viewMonth.value)
+  } finally {
+    makeupSubmitting.value = false
   }
 }
 

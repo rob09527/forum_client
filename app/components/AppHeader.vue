@@ -42,7 +42,9 @@
                  transition-all"
           @keyup.enter="handleSearch"
         />
-        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs">🔍</span>
+        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500">
+          <AppIcon name="search" :size="13" />
+        </span>
       </div>
 
       <!-- 用户区（靠右） -->
@@ -71,7 +73,7 @@
             class="relative flex items-center justify-center w-8 h-8 rounded-md hover:bg-zinc-100 transition-colors"
             title="通知"
           >
-            <span class="text-base leading-none">🔔</span>
+            <span class="text-zinc-600"><AppIcon name="bell" :size="16" /></span>
             <span
               v-if="unread > 0"
               class="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-medium flex items-center justify-center"
@@ -82,7 +84,8 @@
           <div ref="dropdownRef" class="relative">
           <button class="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-zinc-100 transition-colors text-left" @click="toggleDropdown">
             <Avatar :username="user?.username" :avatar="user?.avatar" size="sm" />
-            <span class="text-sm text-zinc-700 hidden xl:inline max-w-[80px] truncate">{{ user?.username }}</span>
+            <!-- 已登录区块内 user 恒非空；装饰随全站 UsernameText 生效 -->
+            <UsernameText :author="user!" size="sm" :show-badges="false" class="hidden xl:inline-flex max-w-[80px]" />
           </button>
           <!-- 下拉菜单 -->
           <Transition name="dropdown">
@@ -91,38 +94,52 @@
               class="absolute right-0 top-full mt-1 w-44 bg-white border border-zinc-200 rounded-lg shadow-xl overflow-hidden z-50"
             >
               <div class="px-4 py-3 border-b border-zinc-200">
-                <p class="text-sm font-medium text-zinc-800 truncate">{{ user?.username }}</p>
-                <p class="text-xs text-zinc-500 truncate">{{ user?.email }}</p>
+                <UsernameText :author="user!" size="sm" class="min-w-0" />
+                <p class="text-xs text-zinc-500 truncate mt-0.5">{{ user?.email }}</p>
               </div>
               <div class="py-1">
                 <NuxtLink
                   :to="`/user/${user?.id}`"
-                  class="w-full px-4 py-2 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors text-left block"
+                  class="w-full px-4 py-2 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors text-left flex items-center gap-2"
                   @click="showDropdown = false"
                 >
-                  👤 个人主页
+                  <AppIcon name="user" :size="14" /> 个人主页
                 </NuxtLink>
                 <NuxtLink
                   to="/my/bookmarks"
-                  class="w-full px-4 py-2 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors text-left block"
+                  class="w-full px-4 py-2 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors text-left flex items-center gap-2"
                   @click="showDropdown = false"
                 >
-                  🔖 我的收藏
+                  <AppIcon name="bookmark" :size="14" /> 我的收藏
+                </NuxtLink>
+                <NuxtLink
+                  to="/shop"
+                  class="w-full px-4 py-2 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors text-left flex items-center gap-2"
+                  @click="showDropdown = false"
+                >
+                  <AppIcon name="shopping-cart" :size="14" /> 积分商城
+                </NuxtLink>
+                <NuxtLink
+                  to="/shop?tab=mine"
+                  class="w-full px-4 py-2 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors text-left flex items-center gap-2"
+                  @click="showDropdown = false"
+                >
+                  <AppIcon name="palette" :size="14" /> 我的装饰
                 </NuxtLink>
                 <NuxtLink
                   to="/following"
-                  class="w-full px-4 py-2 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors text-left block"
+                  class="w-full px-4 py-2 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors text-left flex items-center gap-2"
                   @click="showDropdown = false"
                 >
-                  📡 关注动态
+                  <AppIcon name="rss" :size="14" /> 关注动态
                 </NuxtLink>
               </div>
               <div class="border-t border-zinc-200 py-1">
                 <button
-                  class="w-full px-4 py-2 text-sm text-zinc-600 hover:text-red-600 hover:bg-zinc-100 transition-colors text-left"
+                  class="w-full px-4 py-2 text-sm text-zinc-600 hover:text-red-600 hover:bg-zinc-100 transition-colors text-left flex items-center gap-2"
                   @click="handleLogout"
                 >
-                  🚪 退出
+                  <AppIcon name="log-out" :size="14" /> 退出
                 </button>
               </div>
             </div>

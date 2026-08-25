@@ -15,8 +15,8 @@
       <div class="panel overflow-hidden">
         <!-- 标题 + 全部已读 -->
         <div class="flex items-center justify-between px-6 py-3 border-b border-zinc-200 bg-zinc-50">
-          <h2 class="text-sm font-medium text-zinc-700">
-            🔔 通知
+          <h2 class="text-sm font-medium text-zinc-700 inline-flex items-center gap-1.5">
+            <AppIcon name="bell" :size="14" /> 通知
             <span v-if="unread > 0" class="text-red-500">({{ unread }} 未读)</span>
           </h2>
           <button
@@ -52,7 +52,7 @@
                   size="sm"
                 />
               </div>
-              <div v-else class="w-7 h-7 rounded-full bg-blue-500/15 text-blue-600 flex items-center justify-center text-sm">📢</div>
+              <div v-else class="w-7 h-7 rounded-full bg-blue-500/15 text-blue-600 flex items-center justify-center"><AppIcon name="megaphone" :size="14" /></div>
             </div>
             <!-- 文案 -->
             <div class="flex-1 min-w-0">
@@ -145,6 +145,12 @@ function renderText(n: NotificationItem): string {
     case 'like': return `${who}${more}赞了你的${n.postTitle ? `帖子${postTitle}` : '内容'}`
     case 'follow': return `${who}${more}关注了你`
     case 'mention': return `${who}${more}在${n.postTitle ? `《${n.postTitle}》` : '帖子'}中提到了你`
+    // ── 消费体系通知（设计文档 2.3 类型扩展）──
+    case 'tip': return `${who}${more}打赏了你的${n.postTitle ? `帖子${postTitle}` : '内容'}`
+    case 'bounty_reply': return `${who}${more}回答了你的悬赏帖${postTitle}`
+    // 结算/退款由服务端填 content（含金额文案），直接透出
+    case 'bounty_settled':
+    case 'bounty_refunded': return n.content ?? NotificationTypeLabel[n.type] ?? '有新动态'
     default: return `${who}${more}${NotificationTypeLabel[n.type] ?? '有新动态'}`
   }
 }

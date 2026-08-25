@@ -10,7 +10,8 @@
         class="flex flex-col items-center gap-1 p-1 rounded hover:bg-zinc-100 transition-colors group text-center"
       >
         <Avatar :username="user.username" :avatar="user.avatar" size="md" />
-        <span class="text-[11px] text-zinc-600 group-hover:text-zinc-900 transition-colors truncate w-full">{{ user.username }}</span>
+        <!-- 外层 NuxtLink 已跳转主页，此处 link=false 避免嵌套 <a>；装饰色同样生效 -->
+        <UsernameText :author="user" size="xs" :link="false" class="w-full justify-center" />
       </NuxtLink>
     </div>
   </div>

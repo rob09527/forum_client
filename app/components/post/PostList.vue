@@ -4,7 +4,7 @@
     <div class="flex items-center justify-between px-6 py-3 border-b border-zinc-200 bg-zinc-50">
       <div class="flex items-center gap-1">
         <button
-          v-for="s in sortOptions"
+          v-for="s in sortTabs"
           :key="s.value"
           :class="[
             'px-3 py-1 text-xs rounded-md transition-colors',
@@ -83,6 +83,12 @@ const emit = defineEmits<{
 
 const sortBy = ref('latest')
 const currentPage = ref(1)
+
+// 排序 tab：最新 / 热门 + 悬赏筛选（3.5 聚合入口，父组件把 'bounty' 映射为 bountyStatus='escrow' 过滤）
+const sortTabs = [
+  ...sortOptions,
+  { label: '💰 悬赏', value: 'bounty' },
+]
 
 // 帖子列表内嵌广告（position=inline，多条时每次获取随机抽取一条展示）
 const { adverts } = useAdverts()
