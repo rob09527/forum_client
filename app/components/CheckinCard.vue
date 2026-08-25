@@ -7,23 +7,23 @@
       :aria-expanded="!collapsed"
       @click="collapsed = !collapsed"
     >
-      <span class="text-xs text-zinc-500 transition-colors group-hover:text-zinc-900">📅 每日签到</span>
+      <span class="text-xs text-zinc-500 transition-colors group-hover:text-zinc-900 inline-flex items-center gap-1">
+        <AppIcon name="calendar" :size="13" /> 每日签到
+      </span>
       <span class="flex items-center gap-1.5">
         <span
           v-if="isLoggedIn"
           class="inline-block text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 font-medium"
         >
-          🔥 连续 {{ status.streak }} 天
+          <AppIcon name="flame" :size="11" /> 连续 {{ status.streak }} 天
         </span>
-        <!-- 展开箭头：收起 ▸ / 展开 ▾（旋转过渡） -->
-        <svg
-          class="w-3.5 h-3.5 text-zinc-400 transition-transform duration-200"
+        <!-- 展开箭头：收起 ▸ / 展开 ▾（旋转过渡，统一线性图标集） -->
+        <AppIcon
+          name="chevron-right"
+          :size="14"
+          class="text-zinc-400 transition-transform duration-200"
           :class="collapsed ? '' : 'rotate-90'"
-          viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"
-          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
-        >
-          <path d="M6 4 L10 8 L6 12" />
-        </svg>
+        />
       </span>
     </button>
 

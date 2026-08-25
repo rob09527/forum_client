@@ -51,18 +51,18 @@
       <div class="panel p-6">
         <div class="flex items-center justify-between mb-4">
           <button
-            class="px-2.5 py-1 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded transition-colors"
+            class="btn btn-ghost px-2.5 py-1 text-sm inline-flex items-center gap-1"
             @click="prevMonth"
           >
-            ← 上一月
+            <AppIcon name="chevron-left" :size="14" /> 上一月
           </button>
           <span class="text-sm font-medium text-zinc-700">{{ viewTitle }}</span>
           <button
-            class="px-2.5 py-1 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded transition-colors"
+            class="btn btn-ghost px-2.5 py-1 text-sm inline-flex items-center gap-1"
             :class="canNext ? '' : 'opacity-40 pointer-events-none'"
             @click="nextMonth"
           >
-            下一月 →
+            下一月 <AppIcon name="chevron-right" :size="14" />
           </button>
         </div>
 
@@ -104,7 +104,9 @@
 
       <!-- 规则说明 -->
       <div class="panel p-6">
-        <h2 class="text-sm font-medium text-zinc-700 mb-3">📜 签到规则</h2>
+        <h2 class="text-sm font-medium text-zinc-700 mb-3 inline-flex items-center gap-1.5">
+          <AppIcon name="scroll" :size="14" /> 签到规则
+        </h2>
         <ul class="text-xs text-zinc-500 space-y-2 leading-relaxed">
           <li>① 每日签到 +{{ cfg.base }} 鸡腿</li>
           <li>② 连续签到加成：连续第 N 天额外 +min(N×{{ cfg.streakBonusPerDay }}, {{ cfg.streakBonusCap }})，连续 {{ cfg.streakBonusCap }} 天及以上每天可签得 {{ cfg.base + cfg.streakBonusCap }}</li>

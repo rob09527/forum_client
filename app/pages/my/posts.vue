@@ -16,7 +16,9 @@
     <template v-else>
       <div class="panel overflow-hidden">
         <div class="flex items-center px-6 py-3 border-b border-zinc-200 bg-white/60">
-          <h1 class="text-sm font-medium text-zinc-700">📝 我的帖子</h1>
+          <h1 class="text-sm font-medium text-zinc-700 inline-flex items-center gap-1.5">
+            <AppIcon name="file-text" :size="14" /> 我的帖子
+          </h1>
         </div>
         <PostList
         :posts="posts"

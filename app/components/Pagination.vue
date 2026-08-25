@@ -2,9 +2,10 @@
   <div class="flex items-center gap-0.5 text-xs font-mono">
     <button
       :disabled="currentPage <= 1"
-      class="px-2 py-1 text-zinc-500 hover:text-zinc-900 disabled:opacity-30 disabled:cursor-default"
+      class="px-2 py-1 text-zinc-500 hover:text-zinc-900 disabled:opacity-30 disabled:cursor-default inline-flex items-center"
+      :aria-label="'上一页'"
       @click="$emit('page-change', currentPage - 1)"
-    >◀</button>
+    ><AppIcon name="chevron-left" :size="13" /></button>
     <button
       v-for="p in visiblePagesComputed"
       :key="p"
@@ -18,9 +19,10 @@
     >{{ p }}</button>
     <button
       :disabled="currentPage >= totalPages"
-      class="px-2 py-1 text-zinc-500 hover:text-zinc-900 disabled:opacity-30 disabled:cursor-default"
+      class="px-2 py-1 text-zinc-500 hover:text-zinc-900 disabled:opacity-30 disabled:cursor-default inline-flex items-center"
+      :aria-label="'下一页'"
       @click="$emit('page-change', currentPage + 1)"
-    >▶</button>
+    ><AppIcon name="chevron-right" :size="13" /></button>
   </div>
 </template>
 
