@@ -13,7 +13,9 @@
                    transition-all"
             @keyup.enter="submitSearch"
           />
-          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">🔍</span>
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+            <AppIcon name="search" :size="14" />
+          </span>
         </div>
         <select
           v-model="category"

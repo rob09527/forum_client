@@ -66,8 +66,10 @@ const author = computed(() => ({
   decorTitleExpireAt: props.item.type === 'title' ? props.item.expireAt : null,
 }))
 
+// 到期时间带年份展示（跨年/长期持有的到期日仅月日会产生歧义，如「3/23」无法判断是哪一年）
 const expireText = computed(() =>
   new Date(props.item.expireAt).toLocaleDateString('zh-CN', {
+    year: 'numeric',
     month: 'numeric',
     day: 'numeric',
   })

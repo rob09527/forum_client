@@ -14,6 +14,8 @@ const props = defineProps<{
   /** md-editor 注入的通用插入方法:insert((selectedText) => InsertParam) */
   insert?: Insert
   disabled?: boolean
+  /** md-editor 注入的 showToolbarName,控制图标下方是否显示名称 */
+  showToolbarName?: boolean
 }>()
 
 // ── 弹出层定位(Teleport 到 body,fixed 相对视口) ──
@@ -41,11 +43,12 @@ function onSelect(text: string) {
     type="button"
     class="md-editor-toolbar-item"
     :disabled="disabled"
-    title="插入表情"
+    title="插入表情 / 表情包：点选后插入光标处"
     aria-label="插入表情"
     @click="toggle"
   >
     <span class="text-base leading-none">😊</span>
+    <span v-if="showToolbarName" class="md-editor-toolbar-item-name">表情</span>
   </button>
 
   <Teleport to="body">

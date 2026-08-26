@@ -3,10 +3,7 @@
     <!-- 未登录：引导登录 -->
     <div v-if="!isLoggedIn" class="panel p-10 text-center">
       <p class="text-sm text-zinc-600 mb-4">登录后查看关注动态</p>
-      <button
-        class="px-4 py-1.5 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
-        @click="openLogin"
-      >
+      <button class="btn btn-primary px-4 py-1.5 text-sm" @click="openLogin">
         登录
       </button>
     </div>
@@ -58,7 +55,7 @@
                 <!-- 外层 NuxtLink 已跳转主页，link=false 避免嵌套 <a> -->
                 <UsernameText :author="u" size="sm" :link="false" class="min-w-0" />
               </div>
-              <span class="text-xs text-zinc-500">主页 →</span>
+              <span class="text-xs text-zinc-500 inline-flex items-center gap-0.5">主页 <AppIcon name="chevron-right" :size="12" /></span>
             </NuxtLink>
           </div>
           <div v-if="listTotalPages > 1" class="flex items-center justify-center py-3 border-t border-zinc-200">

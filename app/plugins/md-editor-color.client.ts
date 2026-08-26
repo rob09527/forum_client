@@ -1,4 +1,4 @@
-import { config } from 'md-editor-v3'
+import { config, zh_CN } from 'md-editor-v3'
 import { colorViewExtension } from '~/utils/editor/color-decoration'
 import { stickerViewExtension } from '~/utils/editor/sticker-decoration'
 import { mentionViewExtension } from '~/utils/editor/mention-decoration'
@@ -16,6 +16,27 @@ import { mentionViewExtension } from '~/utils/editor/mention-decoration'
  */
 export default defineNuxtPlugin(() => {
   config({
+    // 工具栏可见名(showToolbarName)微调:默认 zh-CN 名多数够用,只把几个含糊的改清楚。
+    // 必须整体展开 zh_CN 再覆写,否则 languageUserDefined 会整块替换该 locale、丢失其它中文文案。
+    // 注意:这些名字是 MarkdownEditor.client.vue 里 TOOLBAR_USAGE(「怎么用」hover 提示)的键,改这里需同步。
+    editorConfig: {
+      languageUserDefined: {
+        'zh-CN': {
+          ...zh_CN,
+          toolbarTips: {
+            ...zh_CN.toolbarTips,
+            // 名字保持简短(2 字),让发帖工具栏(14 按钮+名字)在窄栏里不横向滚动。
+            // 注意:这些名字是 MarkdownEditor.client.vue 里 TOOLBAR_USAGE(「怎么用」hover 提示)的键,改这里需同步。
+            unorderedList: '无序',
+            orderedList: '有序',
+            image: '图片',
+            code: '代码块',
+            task: '待办',
+            fullscreen: '全屏',
+          },
+        },
+      },
+    },
     codeMirrorExtensions: (extensions) => [
       ...extensions,
       { type: 'forum-color-wysiwyg', extension: colorViewExtension },

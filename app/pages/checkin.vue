@@ -4,10 +4,7 @@
     <div v-if="!isLoggedIn" class="panel p-10 text-center">
       <p class="text-lg text-zinc-700 mb-2 inline-flex items-center gap-1.5"><AppIcon name="calendar" :size="17" /> 每日签到</p>
       <p class="text-sm text-zinc-500 mb-4">登录后才能签到打卡</p>
-      <button
-        class="px-5 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
-        @click="openLogin"
-      >
+      <button class="btn btn-primary px-5 py-2 text-sm" @click="openLogin">
         立即登录
       </button>
     </div>
@@ -16,18 +13,20 @@
       <!-- 顶部统计 -->
       <div class="panel p-6">
         <div class="flex items-center justify-between mb-5">
-          <h1 class="text-lg font-semibold text-zinc-900 inline-flex items-center gap-1.5">
+          <h1 class="text-lg font-semibold text-zinc-900 inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap">
             <AppIcon name="calendar" :size="18" /> 每日签到
           </h1>
           <button
-            class="px-4 py-1.5 text-sm rounded-md transition-colors"
+            class="px-4 py-1.5 text-sm rounded-md transition-colors inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
             :class="status.checkedToday
               ? 'bg-zinc-100 text-zinc-500 cursor-default'
               : 'bg-blue-500 hover:bg-blue-600 text-white'"
             :disabled="status.checkedToday || submitting"
             @click="doCheckin"
           >
-            {{ submitting ? '签到中…' : status.checkedToday ? '今日已签到 ✓' : '立即签到' }}
+            <template v-if="submitting">签到中…</template>
+            <template v-else-if="status.checkedToday"><AppIcon name="check" :size="13" /> 今日已签到</template>
+            <template v-else>立即签到</template>
           </button>
         </div>
 
@@ -41,7 +40,7 @@
             <div class="text-xs text-zinc-500 mt-1">累计签到天数</div>
           </div>
           <div class="text-center p-3 rounded-lg bg-white/70 border border-zinc-200/60">
-            <div class="text-2xl font-bold text-emerald-600">+{{ status.todayDelta }}</div>
+            <div class="text-2xl font-bold text-amber-600">+{{ todayDeltaText }}</div>
             <div class="text-xs text-zinc-500 mt-1">{{ status.checkedToday ? '今日已得' : '今日可签得' }}</div>
           </div>
         </div>
@@ -84,7 +83,7 @@
                 <!-- 补签入口 [1.4.2]：当前月「昨天」未签时显示，一步完成（消耗 makeupPrice🍗） -->
                 <button
                   v-if="cell.isYesterday && !cell.checked"
-                  class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 hover:bg-amber-500/30 transition-colors"
+                  class="text-[11px] px-2 py-0.5 rounded-md bg-amber-500/25 text-amber-800 font-medium hover:bg-amber-500/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40"
                   @click="showMakeupConfirm = true"
                 >
                   补签
@@ -113,7 +112,7 @@
           <li>③ 连续满 {{ cfg.milestoneEvery }} 天里程碑：第 {{ cfg.milestoneEvery }} / {{ cfg.milestoneEvery * 2 }} / … 天额外 +{{ cfg.milestoneBonus }}（第 {{ cfg.milestoneEvery }} 天当天 = {{ cfg.base }} + {{ milestoneStreak }} + {{ cfg.milestoneBonus }} = {{ milestoneDayTotal }}）</li>
           <li>④ 断签连续天数归零，但累计签到天数保留</li>
           <li>⑤ 每人每天限签 1 次</li>
-          <li>⑥ 漏签可补签：消耗 {{ makeupPrice }}🍗 补回昨天（前天已签才可补，当月有限次）</li>
+          <li>⑥ 漏签可补签：消耗 {{ makeupPrice }} 🍗 补回昨天（前天已签才可补，当月有限次）</li>
         </ul>
       </div>
 
@@ -168,6 +167,9 @@ const status = ref<CheckinStatus>({
   calendar: [],
 })
 const submitting = ref(false)
+
+/** 今日所得：千分位展示（+10,001），琥珀色与月历「今天」语义一致（评审整改🔴） */
+const todayDeltaText = computed(() => status.value.todayDelta.toLocaleString('en-US'))
 
 /** 每个月的已签日期缓存（key: YYYY-MM），翻月不再重复请求 */
 const monthCache = new Map<string, Set<string>>()

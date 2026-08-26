@@ -11,26 +11,28 @@
  * 展示优先级：TG 照片（真实外链）> 本地预置头像（avatar 为 /avatars/... 或按用户名确定性映射）
  */
 
-/** 风格 id → 展示文案（纯展示，与后端 id 顺序无关；id 列表以后端下发为准） */
+/** 风格 id → 展示文案（纯展示，与后端 id 顺序无关；id 列表以后端下发为准）。
+ * icon 字段存 AppIcon name（lucide 线性，见 constants/icons.ts），渲染走 <AppIcon :name="s.icon" />，
+ * 替换原 emoji：选中态（style-pill.on）下随 currentColor 变白，不再与蓝底冲突。 */
 const STYLE_META: Record<string, { label: string; icon: string }> = {
-  'bottts-neutral':     { label: '机器人', icon: '🤖' },
-  avataaars:            { label: '卡通',   icon: '👤' },
-  'pixel-art':          { label: '像素',   icon: '👾' },
-  identicon:            { label: '几何',   icon: '🔷' },
-  lorelei:              { label: '顽趣',   icon: '😄' },
-  thumbs:               { label: '拇指',   icon: '👍' },
-  adventurer:           { label: '冒险',   icon: '🧭' },
-  'adventurer-neutral': { label: '冒险2',  icon: '🗺️' },
-  'big-ears':           { label: '大耳',   icon: '👂' },
-  'big-ears-neutral':   { label: '大耳2',  icon: '🐰' },
-  'big-smile':          { label: '笑脸',   icon: '😁' },
-  croodles:             { label: '涂鸦',   icon: '✏️' },
-  'fun-emoji':          { label: '表情',   icon: '😎' },
-  micah:                { label: '米卡',   icon: '🧑' },
-  miniavs:              { label: '迷你',   icon: '🟢' },
-  notionists:           { label: '印象',   icon: '🎨' },
-  'open-peeps':         { label: '人物',   icon: '🙂' },
-  personas:             { label: '角色',   icon: '🦸' },
+  'bottts-neutral':     { label: '机器人', icon: 'bot' },
+  avataaars:            { label: '卡通',   icon: 'user' },
+  'pixel-art':          { label: '像素',   icon: 'grid' },
+  identicon:            { label: '几何',   icon: 'diamond' },
+  lorelei:              { label: '顽趣',   icon: 'smile' },
+  thumbs:               { label: '拇指',   icon: 'thumbs-up' },
+  adventurer:           { label: '冒险',   icon: 'compass' },
+  'adventurer-neutral': { label: '冒险2',  icon: 'map' },
+  'big-ears':           { label: '大耳',   icon: 'ear' },
+  'big-ears-neutral':   { label: '大耳2',  icon: 'rabbit' },
+  'big-smile':          { label: '笑脸',   icon: 'smile' },
+  croodles:             { label: '涂鸦',   icon: 'edit' },
+  'fun-emoji':          { label: '表情',   icon: 'smile' },
+  micah:                { label: '米卡',   icon: 'user' },
+  miniavs:              { label: '迷你',   icon: 'target' },
+  notionists:           { label: '印象',   icon: 'palette' },
+  'open-peeps':         { label: '人物',   icon: 'user' },
+  personas:             { label: '角色',   icon: 'users' },
 }
 
 /** 头像风格定义（id + 展示文案），AvatarPicker 用 */
@@ -45,7 +47,7 @@ export function deriveStyleDefs(styleIds: string[]): AvatarStyleDef[] {
   return styleIds.map((id) => ({
     id,
     label: STYLE_META[id]?.label ?? id,
-    icon: STYLE_META[id]?.icon ?? '👤',
+    icon: STYLE_META[id]?.icon ?? 'user',
   }))
 }
 

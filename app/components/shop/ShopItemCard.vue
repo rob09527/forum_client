@@ -1,12 +1,12 @@
 <template>
-  <div class="panel p-4 flex flex-col">
-    <!-- 商品名 -->
-    <div class="flex items-center justify-between gap-2">
+  <div class="panel p-4 flex flex-col transition-shadow hover:shadow-md hover:shadow-black/10">
+    <!-- 商品名：仅「用户名颜色」展示（色块下带色彩名）；称号/头像视觉即内容，不再叠文字说明 -->
+    <div v-if="isColor" class="flex items-center justify-between gap-2">
       <span class="text-sm font-medium text-zinc-800 truncate">{{ item.name }}</span>
     </div>
 
     <!-- 商品视觉：称号 = 图片索引，颜色 = 色块 + 着色用户名，头像 = 头像图（所见即所得 [1.3.3]） -->
-    <div class="mt-3 rounded-lg bg-zinc-50 h-20 flex items-center justify-center px-3">
+    <div :class="['rounded-lg bg-zinc-50 h-20 flex items-center justify-center px-3', isColor ? 'mt-3' : '']">
       <img v-if="isTitle" :src="titleImg" :alt="item.name" class="h-9 w-auto" />
       <div v-else-if="isAvatar">
         <img :src="item.renderValue" :alt="item.name" class="w-12 h-12 rounded-full border border-black/10" />
@@ -23,9 +23,10 @@
       <span class="text-xs text-zinc-500">{{ item.durationDays }} 天</span>
     </div>
 
-    <!-- 操作：付费商品走购买租用 -->
+    <!-- 操作：付费商品走购买租用（flex-1 撑底，保证同网格行内按钮垂直对齐不漂移） -->
+    <div class="flex-1" />
     <button
-      class="mt-3 w-full py-1.5 text-sm text-white rounded-md transition-colors bg-blue-500 hover:bg-blue-600"
+      class="btn btn-primary mt-3 w-full py-1.5 text-sm"
       @click="emit('buy')"
     >
       购买
@@ -53,6 +54,7 @@ const { user } = useAuth()
 
 const isTitle = computed(() => props.item.type === 'title')
 const isAvatar = computed(() => props.item.type === 'avatar')
+const isColor = computed(() => props.item.type === 'username_color')
 
 /** 称号图片索引 → 资源地址（约定见 utils/decoration.ts） */
 const titleImg = computed(() => titleIconPath(props.item.renderValue))

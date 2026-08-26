@@ -21,7 +21,7 @@
           class="panel flex items-center gap-3 px-6 py-2.5 text-xs"
         >
           <!-- 二轮整改：喇叭图标与“公告”文字留出间距 -->
-          <span class="text-amber-600 font-medium flex-shrink-0"><span class="mr-1">📢</span>公告</span>
+          <span class="text-amber-600 font-medium flex-shrink-0 inline-flex items-center gap-1.5"><AppIcon name="megaphone" :size="14" />公告</span>
           <div class="flex-1 min-w-0 h-5 overflow-hidden">
             <Transition name="announce" mode="out-in">
               <NuxtLink
@@ -60,6 +60,9 @@
 
         <!-- 登录/注册弹窗 -->
         <AuthModal />
+
+        <!-- 浮动私信窗（任意页可唤起，共享 useMessages 状态） -->
+        <ChatDrawer />
       </div>
     </div>
   </template>

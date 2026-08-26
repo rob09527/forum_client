@@ -81,6 +81,20 @@
               {{ unread > 99 ? '99+' : unread }}
             </span>
           </NuxtLink>
+          <!-- 私信信封 + 未读红点 → 私信中心 -->
+          <NuxtLink
+            to="/messages"
+            class="relative flex items-center justify-center w-8 h-8 rounded-md hover:bg-zinc-100 transition-colors"
+            title="私信"
+          >
+            <span class="text-zinc-600"><AppIcon name="mail" :size="16" /></span>
+            <span
+              v-if="dmUnread > 0"
+              class="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-medium flex items-center justify-center"
+            >
+              {{ dmUnread > 99 ? '99+' : dmUnread }}
+            </span>
+          </NuxtLink>
           <div ref="dropdownRef" class="relative">
           <button class="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-zinc-100 transition-colors text-left" @click="toggleDropdown">
             <Avatar :username="user?.username" :avatar="user?.avatar" size="sm" />
@@ -94,7 +108,8 @@
               class="absolute right-0 top-full mt-1 w-44 bg-white border border-zinc-200 rounded-lg shadow-xl overflow-hidden z-50"
             >
               <div class="px-4 py-3 border-b border-zinc-200">
-                <UsernameText :author="user!" size="sm" class="min-w-0" />
+                <!-- 下拉头像信息：只显用户名，不挂等级/称号徽章 -->
+                <UsernameText :author="user!" size="sm" :show-badges="false" class="min-w-0" />
                 <p class="text-xs text-zinc-500 truncate mt-0.5">{{ user?.email }}</p>
               </div>
               <div class="py-1">
@@ -104,6 +119,13 @@
                   @click="showDropdown = false"
                 >
                   <AppIcon name="user" :size="14" /> 个人主页
+                </NuxtLink>
+                <NuxtLink
+                  to="/messages"
+                  class="w-full px-4 py-2 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors text-left flex items-center gap-2"
+                  @click="showDropdown = false"
+                >
+                  <AppIcon name="mail" :size="14" /> 我的私信
                 </NuxtLink>
                 <NuxtLink
                   to="/my/bookmarks"
@@ -154,8 +176,9 @@
 
 <script setup lang="ts">
 const { user, isLoggedIn, logout, openLogin, openRegister } = useAuth()
-const toast = useToast()
-const { unread, fetchUnread, initStream, stopStream } = useNotifications()
+const realtime = useRealtime()
+const { unread, fetchUnread, setupRealtime: setupNotifRealtime } = useNotifications()
+const { unread: dmUnread, fetchUnread: fetchDmUnread, setupRealtime: setupDmRealtime } = useMessages()
 
 const showDropdown = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
@@ -186,27 +209,31 @@ function handleEsc(e: KeyboardEvent) {
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
   document.addEventListener('keydown', handleEsc)
-  // 通知：初始拉未读数；已登录则建立 SSE 长连接
+  // 通知 + 私信：初始拉未读数；已登录则建立 SSE 统一单流并注册订阅
   fetchUnread()
-  initStream((_n) => {
-    toast.add({ title: '收到新通知', color: 'info', duration: 3000 })
-  })
+  fetchDmUnread()
+  realtime.start()
+  setupNotifRealtime()
+  setupDmRealtime()
 })
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
   document.removeEventListener('keydown', handleEsc)
-  stopStream()
+  realtime.stop()
 })
 
 // 登录态变化：登录后建流，登出后清理并清零未读
 watch(isLoggedIn, (loggedIn) => {
   if (loggedIn) {
     fetchUnread()
-    initStream((_n) => {
-      toast.add({ title: '收到新通知', color: 'info', duration: 3000 })
-    })
+    fetchDmUnread()
+    realtime.start()
+    setupNotifRealtime()
+    setupDmRealtime()
   } else {
-    stopStream()
+    realtime.stop()
+    unread.value = 0
+    dmUnread.value = 0
   }
 })
 

@@ -19,7 +19,7 @@
         <div class="w-12 h-12 rounded-full overflow-hidden bg-zinc-200 flex-shrink-0">
           <img :src="localAvatarPath(s.id, 1)" :alt="s.label" class="w-full h-full" loading="lazy" />
         </div>
-        <span class="text-[10px] text-zinc-600 leading-tight text-center">{{ s.icon }} {{ s.label }}</span>
+        <span class="text-[10px] text-zinc-600 leading-tight text-center inline-flex items-center justify-center gap-0.5"><AppIcon :name="s.icon" :size="11" /> {{ s.label }}</span>
       </button>
     </div>
 
@@ -41,10 +41,16 @@
           loading="lazy"
         />
         <span
-          v-if="isPaid(expandedStyle, n)"
+          v-if="isLocked(expandedStyle, n)"
           class="absolute inset-x-0 bottom-0 rounded-b-md bg-black/60 text-white text-[10px] py-0.5 flex items-center justify-center gap-0.5"
         >
           <AppIcon name="lock" :size="10" /> {{ priceOf(expandedStyle, n) }}
+        </span>
+        <span
+          v-else-if="isPaid(expandedStyle, n)"
+          class="absolute inset-x-0 bottom-0 rounded-b-md bg-emerald-600/80 text-white text-[10px] py-0.5 flex items-center justify-center gap-0.5"
+        >
+          <AppIcon name="check" :size="10" /> 已拥有
         </span>
       </button>
     </div>
@@ -77,7 +83,7 @@ const perStyle = computed(() => avatarStyles.value?.perStyle ?? 20)
  * 头像商品价目表 path → price（头像商品化）：
  * 从商城 items（type='avatar'）构建；播种前（无 avatar 商品行）priceMap 为空 → 全部按免费处理（向后兼容）。
  */
-const { items, fetchItems } = useShop()
+const { items, fetchItems, mine, fetchMine } = useShop()
 const priceMap = computed(() => {
   const m = new Map<string, number>()
   for (const it of items.value) {
@@ -85,8 +91,22 @@ const priceMap = computed(() => {
   }
   return m
 })
+
+/** 已购买且未过期的头像路径集合（来自「我的装饰」type=avatar 的生效项） */
+const ownedAvatarPaths = computed(() => {
+  const s = new Set<string>()
+  for (const g of mine.value) {
+    if (g.type !== 'avatar') continue
+    for (const it of g.items) {
+      if (it.active) s.add(it.renderValue)
+    }
+  }
+  return s
+})
 onMounted(() => {
   fetchItems()
+  // 登录后拉持有记录，识别已购付费头像（未登录 401 由 useShop 内部吞掉）
+  fetchMine()
 })
 
 /** 当前展开的风格（默认高亮到用户当前头像所属风格，否则机器人） */
@@ -113,9 +133,14 @@ function priceOf(style: string, n: number): number {
   return avatarPrice(style, n)
 }
 
-/** 免费 → 选中；付费 → 引导去商城解锁（跳 /shop + toast） */
+/** 是否已解锁：免费，或已购且未过期（不再一律按价格判定，否则买了的头像仍显示未解锁） */
+function isLocked(style: string, n: number): boolean {
+  return avatarPrice(style, n) > 0 && !ownedAvatarPaths.value.has(localAvatarPath(style, n))
+}
+
+/** 免费/已拥有 → 选中；未拥有的付费 → 引导去商城解锁（跳 /shop + toast） */
 function onAvatarClick(style: string, n: number) {
-  if (isPaid(style, n)) {
+  if (isLocked(style, n)) {
     toast.add({ title: `「${style}-${String(n).padStart(2, '0')}」需在商城解锁 →`, color: 'warning' })
     navigateTo('/shop?sub=avatar')
     return

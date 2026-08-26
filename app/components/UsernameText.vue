@@ -106,9 +106,14 @@ const titleBadgeSize = computed(() => {
   const map = { xs: 'text-[10px]', sm: 'text-xs', lg: 'text-sm' } as const
   return map[props.size]
 })
-/** 称号图片高度档位（webp 为 3:1 长条，高度随文本档位缩放） */
+/**
+ * 称号图片高度档位（webp 为 3:1 长条）。
+ * 高度不再随字号缩到 14-16px：千问阶梯测试（2026-08-25）显示 <24px 明显模糊不可读、
+ * 24px（Retina 下 48 物理 px）清晰且与行内 12px 文字比例协调、28px+ 偏重。
+ * xs/sm 统一 h-6(24px) 保清晰又不过重；lg（用户页大标题场景，非紧凑行）用 h-8(32px) 更突出。
+ */
 const titleIconSize = computed(() => {
-  const map = { xs: 'h-3.5', sm: 'h-4', lg: 'h-5' } as const
+  const map = { xs: 'h-6', sm: 'h-6', lg: 'h-8' } as const
   return map[props.size]
 })
 

@@ -14,7 +14,7 @@
           ]"
           @click="selectSort(s.value)"
         >
-          {{ s.label }}
+          <span class="inline-flex items-center gap-1"><AppIcon v-if="s.icon" :name="s.icon" :size="12" /> {{ s.label }}</span>
         </button>
       </div>
       <Pagination
@@ -87,7 +87,7 @@ const currentPage = ref(1)
 // 排序 tab：最新 / 热门 + 悬赏筛选（3.5 聚合入口，父组件把 'bounty' 映射为 bountyStatus='escrow' 过滤）
 const sortTabs = [
   ...sortOptions,
-  { label: '💰 悬赏', value: 'bounty' },
+  { label: '悬赏', value: 'bounty', icon: 'coins' },
 ]
 
 // 帖子列表内嵌广告（position=inline，多条时每次获取随机抽取一条展示）

@@ -1,14 +1,17 @@
 import type { ApiResponse, NotificationItem, Paginated } from '~/types'
 import { useApiBase } from './api'
+import { useRealtime } from './useRealtime'
 
 /**
  * 站内通知。
- * 未读数 + 列表 + 已读操作；initStream 建立 SSE 长连接实时更新未读数。
- * SSE 生命周期：登录后创建、退出/卸载时关闭（EventSource 断线自动重连，无需手动处理）。
+ * 未读数 + 列表 + 已读操作；实时推送由 useRealtime 统一单流承载。
+ * setupRealtime 订阅 notification 事件 + 断线补拉未读数（幂等：进程内只注册一次）。
  */
 export function useNotifications() {
   const apiBase = useApiBase()
   const { isLoggedIn } = useAuth()
+  const realtime = useRealtime()
+  const toast = useToast()
 
   /**
    * 未读数（顶栏红点）。用 useState 按 key 共享：AppHeader 与 notifications.vue
@@ -19,10 +22,6 @@ export function useNotifications() {
   const items = ref<NotificationItem[]>([])
   const totalPages = ref(0)
   const loading = ref(false)
-
-  let source: EventSource | null = null
-  /** 收到新通知时的回调（调用方用于 toast 提示） */
-  let onNew: ((n: NotificationItem | null) => void) | null = null
 
   async function fetchUnread(): Promise<void> {
     if (!isLoggedIn.value) {
@@ -75,33 +74,25 @@ export function useNotifications() {
   }
 
   /**
-   * 建立 SSE 长连接（仅登录 + 客户端执行）。
-   * cb 在收到新通知时回调（事件 payload 不带完整通知详情，仅 { notification, unreadCount } 或 { type:'system' }）。
+   * 订阅实时通知 + 断线补拉（幂等，进程内只注册一次）。
+   * payload 形态：{ notification, unreadCount }（业务通知）或 { type:'system' }（系统群发，不带未读数）。
    */
-  function initStream(cb?: (n: NotificationItem | null) => void): void {
-    onNew = cb ?? null
-    // SSR 阶段无 EventSource；未登录不建连（登出时 stopStream 清理）
-    if (import.meta.server || !isLoggedIn.value || source) return
+  function setupRealtime(): void {
+    if (realtimeRegistered) return
+    realtimeRegistered = true
 
-    source = new EventSource(`${apiBase.value}/api/me/notifications/stream`)
-    source.addEventListener('notification', (e) => {
-      try {
-        const payload = JSON.parse((e as MessageEvent).data)
-        if (typeof payload.unreadCount === 'number') {
-          unread.value = payload.unreadCount
-        }
-        onNew?.(payload.notification ?? null)
-      } catch {
-        // 解析失败忽略（心跳注释行无 data 不会触发此事件）
+    realtime.subscribe('notification', (payload) => {
+      if (typeof payload.unreadCount === 'number') {
+        unread.value = payload.unreadCount
+      } else {
+        // 系统群发不带未读数，兜底重拉
+        fetchUnread()
       }
+      toast.add({ title: '收到新通知', color: 'info', duration: 3000 })
     })
-    // EventSource 断线自动重连，无需处理 onerror
-  }
-
-  function stopStream(): void {
-    source?.close()
-    source = null
-    onNew = null
+    realtime.onReconnect(() => {
+      fetchUnread()
+    })
   }
 
   return {
@@ -113,7 +104,9 @@ export function useNotifications() {
     loadNotifications,
     markAllRead,
     markRead,
-    initStream,
-    stopStream,
+    setupRealtime,
   }
 }
+
+/** 进程内注册标记：setupRealtime 只注册一次，避免多组件重复订阅 */
+let realtimeRegistered = false

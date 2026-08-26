@@ -29,7 +29,8 @@
           </span>
           <span class="inline-flex items-center gap-1">
             <span class="text-zinc-400"><AppIcon name="user" :size="12" /></span>
-            <UsernameText :author="post.author" size="xs" />
+            <!-- 外层已套 /post/:id 的 <NuxtLink>，这里 link=false 避免嵌套 <a> 导致 hydration 报错 -->
+            <UsernameText :author="post.author" size="xs" :link="false" />
           </span>
           <span class="inline-flex items-center gap-1">
             <span class="text-zinc-400"><AppIcon name="clock" :size="12" /></span>

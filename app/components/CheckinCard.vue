@@ -7,13 +7,13 @@
       :aria-expanded="!collapsed"
       @click="collapsed = !collapsed"
     >
-      <span class="text-xs text-zinc-500 transition-colors group-hover:text-zinc-900 inline-flex items-center gap-1">
+      <span class="text-xs text-zinc-500 transition-colors group-hover:text-zinc-900 inline-flex items-center gap-1 shrink-0">
         <AppIcon name="calendar" :size="13" /> 每日签到
       </span>
       <span class="flex items-center gap-1.5">
         <span
           v-if="isLoggedIn"
-          class="inline-block text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 font-medium"
+          class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 font-medium whitespace-nowrap"
         >
           <AppIcon name="flame" :size="11" /> 连续 {{ status.streak }} 天
         </span>
@@ -58,14 +58,16 @@
 
         <!-- 签到按钮（未登录 → 弹登录框） -->
         <button
-          class="w-full py-1.5 text-xs rounded-md transition-colors"
+          class="w-full py-1.5 text-xs rounded-md transition-colors inline-flex items-center justify-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
           :class="status.checkedToday
             ? 'bg-zinc-100 text-zinc-500 cursor-default'
             : 'bg-blue-500 hover:bg-blue-600 text-white'"
           :disabled="status.checkedToday || submitting"
           @click="doCheckin"
         >
-          {{ submitting ? '签到中…' : status.checkedToday ? '今日已签到 ✓' : '立即签到' }}
+          <template v-if="submitting">签到中…</template>
+          <template v-else-if="status.checkedToday"><AppIcon name="check" :size="12" /> 今日已签到</template>
+          <template v-else>立即签到</template>
         </button>
 
         <!-- 完整日历入口 -->
@@ -73,7 +75,7 @@
           to="/checkin"
           class="block text-center text-[11px] text-zinc-600 hover:text-zinc-600 mt-2 transition-colors"
         >
-          完整日历 →
+          <span class="inline-flex items-center gap-0.5">完整日历 <AppIcon name="chevron-right" :size="12" /></span>
         </NuxtLink>
       </div>
     </div>

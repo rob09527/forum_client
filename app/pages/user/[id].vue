@@ -3,10 +3,7 @@
     <!-- 未登录：登录引导（资料接口需登录，与 /my/posts 同策略） -->
     <div v-if="!isLoggedIn" class="panel p-10 text-center">
       <p class="text-sm text-zinc-600 mb-4">登录后查看用户资料</p>
-      <button
-        class="px-4 py-1.5 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
-        @click="openLogin"
-      >
+      <button class="btn btn-primary px-4 py-1.5 text-sm" @click="openLogin">
         登录
       </button>
     </div>
@@ -45,28 +42,34 @@
             <div class="flex items-center gap-2 flex-wrap">
               <!-- 全站统一用户名渲染（装饰自动生效；他人资料装饰同样展示） -->
               <UsernameText :author="profile" size="lg" />
-              <!-- 修改用户名（仅本人视角，改名道具 [1.4.3][3.6]） -->
+              <!-- 修改用户名（仅本人视角，改名道具 [1.4.3][3.6]）；图标按钮，悬停显示说明 -->
               <button
                 v-if="isOwnProfile"
-                class="text-xs px-3 py-1 rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition-colors"
+                class="p-1.5 rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition-colors inline-flex items-center justify-center"
+                title="修改用户名"
                 @click="openRename"
               >
-                ✏️ 修改用户名
+                <AppIcon name="edit" :size="13" />
               </button>
               <!-- 关注按钮（仅他人视角） -->
               <button
                 v-if="!isOwnProfile"
-                class="text-xs px-3 py-1 rounded-md transition-colors"
+                class="text-xs px-3 py-1 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
                 :class="following ? 'bg-zinc-200 text-zinc-600 hover:bg-zinc-300' : 'bg-blue-500 hover:bg-blue-600 text-white'"
                 @click="handleToggleFollow"
               >
                 {{ following ? '已关注' : '+ 关注' }}
               </button>
-              <span class="text-[11px] px-2 py-0.5 rounded font-medium" :class="levelClass">
-                {{ levelLabel }}
-              </span>
-              <span v-if="profile.stars > 0" class="text-[11px] px-2 py-0.5 rounded bg-yellow-500/15 text-yellow-600 font-medium">
-                ⭐ {{ profile.stars }}
+              <!-- 发私信（仅他人视角；弹出浮动聊天窗） -->
+              <button
+                v-if="!isOwnProfile"
+                class="text-xs px-3 py-1 rounded-md transition-colors bg-zinc-200 text-zinc-700 hover:bg-zinc-300"
+                @click="handleMessage"
+              >
+                私信
+              </button>
+              <span v-if="profile.stars > 0" class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-yellow-500/15 text-yellow-600 font-medium">
+                <AppIcon name="star" :size="11" /> {{ profile.stars }}
               </span>
             </div>
             <div class="text-xs text-zinc-500 mt-1">
@@ -157,9 +160,9 @@
             <span v-if="balance < renamePrice" class="text-xs text-red-600">余额不足</span>
           </div>
           <div class="flex justify-end gap-2 pt-1">
-            <button class="px-4 py-1.5 text-sm text-zinc-600 hover:text-zinc-900" @click="showRename = false">取消</button>
+            <button class="btn btn-ghost px-4 py-1.5 text-sm" @click="showRename = false">取消</button>
             <button
-              class="px-4 py-1.5 text-sm bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white rounded-md transition-colors"
+              class="btn btn-primary px-4 py-1.5 text-sm"
               :disabled="!renameReady || renaming"
               @click="doRename"
             >
@@ -225,6 +228,7 @@ const userIdValid = Number.isInteger(userId) && userId > 0
 
 const { getProfile, getPointsLog, updateAvatar } = useUserProfile()
 const { toggleFollow } = useFollow()
+const { openChat } = useMessages()
 
 // ── 资料（需登录；SSR 未登录 401 返回 null，登录后重拉） ──
 const { data: profile, pending, refresh: refreshProfile } = useAsyncData<UserProfile | null>(
@@ -349,6 +353,19 @@ async function handleToggleFollow() {
   }
 }
 
+/** 发起私信：弹出浮动聊天窗（建立会话 + 加载消息；对方隐私门槛由后端拦截并透出文案） */
+async function handleMessage() {
+  if (!isLoggedIn.value) {
+    openLogin()
+    return
+  }
+  try {
+    await openChat(userId)
+  } catch (err: any) {
+    toast.add({ title: extractErrorMessage(err, '无法发起私信'), color: 'error' })
+  }
+}
+
 async function handleAvatarSelect(avatar: string) {
   if (!isLoggedIn.value) return
   try {
@@ -397,9 +414,8 @@ watch(isOwnProfile, (own) => {
 }, { immediate: true })
 
 // ── 展示辅助 ──
-// 等级名/徽章来自后台配置，未加载时回退静态映射
-const { levelName, levelBadgeClass: badgeFor } = useGameConfig()
-const levelClass = computed(() => badgeFor(profile.value?.level))
+// 等级名来自后台配置，未加载时回退静态映射（等级徽章已由 UsernameText 统一渲染，此处不再重复）
+const { levelName } = useGameConfig()
 const levelLabel = computed(() => levelName(profile.value?.level))
 const nextLevelLabel = computed(() => {
   const next = profile.value?.levelProgress.nextLevelAt

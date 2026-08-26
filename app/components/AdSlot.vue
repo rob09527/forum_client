@@ -1,29 +1,37 @@
 <template>
   <!-- 无广告时渲染空（调用方布局自动收起占位空间） -->
   <template v-if="ad">
-    <!-- 站内链接：SPA 跳转 -->
-    <NuxtLink
-      v-if="ad.link?.startsWith('/')"
-      :to="ad.link"
-      class="block overflow-hidden rounded-lg border border-zinc-200 shadow-sm hover:opacity-90 transition-opacity"
-    >
-      <img :src="ad.image" :alt="ad.title ?? '广告'" :class="imgClass" loading="lazy" />
-    </NuxtLink>
+    <div class="relative">
+      <!-- 站内链接：SPA 跳转 -->
+      <NuxtLink
+        v-if="ad.link?.startsWith('/')"
+        :to="ad.link"
+        class="block overflow-hidden rounded-lg border border-zinc-200 shadow-sm hover:opacity-90 transition-opacity"
+      >
+        <img :src="ad.image" :alt="ad.title ?? '广告'" :class="imgClass" loading="lazy" />
+      </NuxtLink>
 
-    <!-- 外链：新开标签页 -->
-    <a
-      v-else-if="ad.link"
-      :href="externalHref(ad.link)"
-      target="_blank"
-      rel="noopener noreferrer"
-      class="block overflow-hidden rounded-lg border border-zinc-200 shadow-sm hover:opacity-90 transition-opacity"
-    >
-      <img :src="ad.image" :alt="ad.title ?? '广告'" :class="imgClass" loading="lazy" />
-    </a>
+      <!-- 外链：新开标签页 -->
+      <a
+        v-else-if="ad.link"
+        :href="externalHref(ad.link)"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="block overflow-hidden rounded-lg border border-zinc-200 shadow-sm hover:opacity-90 transition-opacity"
+      >
+        <img :src="ad.image" :alt="ad.title ?? '广告'" :class="imgClass" loading="lazy" />
+      </a>
 
-    <!-- 无链接：纯展示 -->
-    <div v-else class="overflow-hidden rounded-lg border border-zinc-200 shadow-sm">
-      <img :src="ad.image" :alt="ad.title ?? '广告'" :class="imgClass" loading="lazy" />
+      <!-- 无链接：纯展示 -->
+      <div v-else class="overflow-hidden rounded-lg border border-zinc-200 shadow-sm">
+        <img :src="ad.image" :alt="ad.title ?? '广告'" :class="imgClass" loading="lazy" />
+      </div>
+
+      <!-- 广告合规角标（评审整改🟡）：侧栏/展示位须标注「广告」，列表内嵌位（inline）不标 -->
+      <span
+        v-if="ad.position !== 'inline'"
+        class="absolute top-1 right-1 px-1.5 py-0.5 rounded text-[10px] leading-none text-white bg-black/55"
+      >广告</span>
     </div>
   </template>
 </template>

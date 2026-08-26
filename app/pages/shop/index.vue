@@ -3,18 +3,15 @@
     <!-- 到期提醒横幅 [1.3.4] -->
     <ShopBanner v-if="expiringSoon.length" :items="expiringSoon" />
 
-    <!-- 余额 + Tab（URL query 驱动，?tab=mine 直达「我的」） -->
+    <!-- Tab（URL query 驱动，?tab=mine 直达「我的」；顶部不展示余额）。
+         tabs 保留右侧定位（ml-auto）：原面板即「余额在左 + tabs 靠右」，去余额后 tabs 归位、左侧留白更干净 -->
     <div class="panel px-5 py-3 flex items-center gap-3">
-      <span class="flex items-center gap-1 text-sm font-medium text-zinc-700">
-        <span class="text-amber-600">🍗</span>
-        <span class="tabular-nums">{{ balance }}</span>
-      </span>
       <div class="ml-auto flex items-center gap-1">
         <button
           v-for="t in tabs"
           :key="t.value"
-          class="px-3 py-1 text-sm rounded-md transition-colors inline-flex items-center gap-1"
-          :class="activeTab === t.value ? 'bg-zinc-200 text-zinc-800' : 'text-zinc-600 hover:text-zinc-900'"
+          class="px-3.5 py-1.5 text-sm rounded-md transition-colors inline-flex items-center gap-1.5"
+          :class="activeTab === t.value ? 'bg-zinc-200 text-zinc-800 font-medium' : 'text-zinc-600 hover:text-zinc-900'"
           @click="switchTab(t.value)"
         >
           <AppIcon :name="t.icon" :size="13" /> {{ t.label }}
@@ -29,19 +26,18 @@
       <div v-else-if="items.length === 0" class="panel p-10 text-center text-sm text-zinc-600">
         商城筹备中，稍后就能用鸡腿换装饰啦～
       </div>
-      <!-- 余额不足引导（还差 N 🍗 · 去签到） -->
-      <ShopEmptyState v-else-if="missing > 0" :missing="missing" />
+      <!-- 商品网格无条件展示：没鸡腿也能自由浏览（余额不足时点购买自会提示），不做「余额不够就锁住整个商城」的限制 -->
       <!-- 称号 / 颜色 切换子 tab：不全部铺满，一次只展示一个分区 -->
       <template v-else>
         <div class="flex items-center gap-2 px-1">
           <button
             v-for="st in subTabs"
             :key="st.value"
-            class="px-3 py-1.5 text-sm rounded-lg transition-colors"
+            class="px-3 py-1.5 text-sm rounded-lg transition-colors inline-flex items-center gap-1"
             :class="subTab === st.value ? 'bg-blue-500 text-white' : 'text-zinc-600 hover:text-zinc-900'"
             @click="switchSubTab(st.value)"
           >
-            {{ st.label }}（{{ st.count }}）
+            <AppIcon :name="st.icon" :size="14" /> {{ st.label }}（{{ st.count }}）
           </button>
         </div>
 
@@ -54,7 +50,7 @@
             :class="{ on: effectiveAvatarStyle === s.id }"
             @click="switchAvatarStyle(s.id)"
           >
-            {{ s.icon }} {{ s.label }}
+            <AppIcon :name="s.icon" :size="14" class="shrink-0" /> {{ s.label }}
           </button>
         </div>
 
@@ -66,19 +62,23 @@
         <!-- 分页 -->
         <div v-if="totalPages > 1" class="flex items-center justify-center gap-3 mt-4">
           <button
-            class="px-3 py-1 text-sm rounded-md border border-zinc-200 text-zinc-600 hover:bg-zinc-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            class="px-3 py-1 text-sm rounded-md border border-zinc-200 text-zinc-600 hover:bg-zinc-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
             :disabled="page <= 0"
             @click="prevPage"
           >
-            ← 上一页
+            <AppIcon name="chevron-left" :size="14" /> 上一页
           </button>
-          <span class="text-sm text-zinc-500">{{ page + 1 }} / {{ totalPages }}</span>
+          <span class="text-sm text-zinc-500 inline-flex items-baseline gap-1 tabular-nums">
+            <span class="font-semibold text-blue-600">{{ page + 1 }}</span>
+            <span>/</span>
+            <span>{{ totalPages }}</span>
+          </span>
           <button
-            class="px-3 py-1 text-sm rounded-md border border-zinc-200 text-zinc-600 hover:bg-zinc-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            class="px-3 py-1 text-sm rounded-md border border-zinc-200 text-zinc-600 hover:bg-zinc-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
             :disabled="page >= totalPages - 1"
             @click="nextPage"
           >
-            下一页 →
+            下一页 <AppIcon name="chevron-right" :size="14" />
           </button>
         </div>
       </template>
@@ -99,11 +99,11 @@
           <button
             v-for="mt in mineSubTabs"
             :key="mt.value"
-            class="px-3 py-1.5 text-sm rounded-lg transition-colors"
+            class="px-3 py-1.5 text-sm rounded-lg transition-colors inline-flex items-center gap-1"
             :class="mineSubTab === mt.value ? 'bg-blue-500 text-white' : 'text-zinc-600 hover:text-zinc-900'"
             @click="switchMineSubTab(mt.value)"
           >
-            {{ mt.label }}（{{ mt.count }}）
+            <AppIcon :name="mt.icon" :size="14" /> {{ mt.label }}（{{ mt.count }}）
           </button>
         </div>
         <div class="panel p-4">
@@ -130,7 +130,6 @@
 import type { MyDecorationItem, ShopItem, ShopItemTypeValue } from '~/types'
 import { ShopItemTypeLabel } from '~/types'
 import { useShop } from '~/composables/useShop'
-import { usePoints } from '~/composables/usePoints'
 import { useAuth } from '~/composables/useAuth'
 import { useAvatarStyles } from '~/composables/useAvatarStyles'
 import { deriveStyleDefs } from '~/utils/avatar'
@@ -142,7 +141,6 @@ const toast = useToast()
 
 const { isLoggedIn, openLogin } = useAuth()
 const { items, expiringSoon, mine, isLoading, isMineLoading, error, fetchItems, fetchMine, purchase, activate } = useShop()
-const { balance } = usePoints()
 
 /** Tab 态：?tab=mine 直达「我的」 */
 const activeTab = computed(() => (route.query.tab === 'mine' ? 'mine' : 'shop'))
@@ -155,14 +153,6 @@ function switchTab(tab: string) {
   if (tab === activeTab.value) return
   router.push({ path: '/shop', query: { ...route.query, tab } })
 }
-
-/** 最便宜商品缺口：余额不足以买最便宜装饰时展示空态引导。
- * 免费头像（price=0）不参与定价引导，故只统计 price>0 的可售商品 */
-const cheapest = computed(() => {
-  const sale = items.value.filter((i) => i.price > 0)
-  return sale.length ? Math.min(...sale.map((i) => i.price)) : 0
-})
-const missing = computed(() => Math.max(0, cheapest.value - balance.value))
 
 /** 称号区 / 颜色区 / 头像区拆分 [2.2]：业务分区展示，互不冗杂。
  * 商城只卖付费头像（免费池头像在个人资料选择器直接选、不在商城展示），按风格 pill 切换，一次看一个风格。 */
@@ -237,9 +227,9 @@ const mineActiveGroup = computed(() =>
     : mineSubTab.value === 'avatar' ? avatarGroup.value
     : colorGroup.value)
 const mineSubTabs = computed(() => [
-  { label: '🎖 专属称号', value: 'title' as ShopItemTypeValue, count: titleGroup.value?.items.length ?? 0 },
-  { label: '🎨 用户名颜色', value: 'username_color' as ShopItemTypeValue, count: colorGroup.value?.items.length ?? 0 },
-  { label: '👤 头像', value: 'avatar' as ShopItemTypeValue, count: avatarGroup.value?.items.length ?? 0 },
+  { label: '专属称号', value: 'title' as ShopItemTypeValue, count: titleGroup.value?.items.length ?? 0, icon: 'medal' },
+  { label: '用户名颜色', value: 'username_color' as ShopItemTypeValue, count: colorGroup.value?.items.length ?? 0, icon: 'palette' },
+  { label: '头像', value: 'avatar' as ShopItemTypeValue, count: avatarGroup.value?.items.length ?? 0, icon: 'user' },
 ])
 const mineSubLabel = computed(() => ShopItemTypeLabel[mineSubTab.value])
 function switchMineSubTab(v: ShopItemTypeValue) {
@@ -304,27 +294,30 @@ watch(activeTab, (tab) => {
 </script>
 
 <style scoped>
-/* 头像风格切换 pill（与后台商品目录同款） */
+/* 头像风格切换 pill（与后台商品目录同款）。
+   颜色直接取项目主题 blue/zinc 色值（main.css --color-primary=#3b82f6），
+   不依赖 Nuxt UI 的 --ui-color-* 变量——该项目未注入这些变量，
+   background 失效会回退白底 + color:#fff → 选中态白底白字不可见（bug 修复）。 */
 .style-pill {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   padding: 5px 12px;
   border-radius: 16px;
-  border: 1px solid var(--ui-color-border);
-  background: var(--ui-color-background);
+  border: 1px solid #e4e4e7; /* zinc-200 */
+  background: #fff;
   font-size: 12px;
-  color: var(--ui-color-text-secondary);
+  color: #52525b; /* zinc-600 */
   cursor: pointer;
   transition: all 0.15s;
 }
 .style-pill:hover {
-  border-color: var(--ui-color-primary);
-  color: var(--ui-color-primary);
+  border-color: #3b82f6; /* blue-500 */
+  color: #3b82f6;
 }
 .style-pill.on {
-  background: var(--ui-color-primary);
-  border-color: var(--ui-color-primary);
+  background: #3b82f6; /* blue-500 */
+  border-color: #3b82f6;
   color: #fff;
   font-weight: 600;
 }

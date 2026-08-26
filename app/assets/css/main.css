@@ -190,6 +190,36 @@
   @apply max-w-full rounded-md my-3;
 }
 
+/* ── 编辑器分屏预览排版与帖子正文(渲染链路)一致 ──
+   md-editor 预览容器是 .md-editor-preview,选择器与上方 .markdown-body 逐条对齐,
+   避免发帖时分屏预览看到的效果和发布后的帖子不一样。 */
+.md-editor-preview {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+.md-editor-preview h1,
+.md-editor-preview h2,
+.md-editor-preview h3,
+.md-editor-preview h4 { @apply text-zinc-900 font-semibold mt-5 mb-3 leading-snug; }
+.md-editor-preview h1 { @apply text-xl; }
+.md-editor-preview h2 { @apply text-lg; }
+.md-editor-preview h3 { @apply text-base; }
+.md-editor-preview p { @apply my-2.5; }
+.md-editor-preview a { @apply text-blue-600 hover:text-blue-500 hover:underline; }
+.md-editor-preview ul { @apply list-disc pl-6 my-2.5 space-y-1; }
+.md-editor-preview ol { @apply list-decimal pl-6 my-2.5 space-y-1; }
+.md-editor-preview li > p { @apply my-1; }
+.md-editor-preview blockquote { @apply border-l-4 border-zinc-300 pl-4 my-3 text-zinc-600 italic; }
+.md-editor-preview code { @apply bg-zinc-100 text-pink-600 text-[0.85em] px-1.5 py-0.5 rounded font-mono; }
+.md-editor-preview pre { @apply bg-zinc-50 border border-zinc-200 rounded-lg p-4 my-3 overflow-x-auto font-mono text-[13px] leading-6; }
+.md-editor-preview pre code { @apply bg-transparent text-zinc-800 p-0 rounded-none; }
+.md-editor-preview img { @apply max-w-full rounded-md my-3; }
+.md-editor-preview hr { @apply border-zinc-200 my-5; }
+.md-editor-preview table { @apply w-full my-3 text-sm border-collapse; }
+.md-editor-preview th,
+.md-editor-preview td { @apply border border-zinc-200 px-3 py-1.5 text-left; }
+.md-editor-preview th { @apply bg-zinc-50 text-zinc-900 font-medium; }
+
 /* 表情包(SVG 无 width/height,浏览器默认会填满容器宽度 → 固定成行内小图标,与编辑器内一致)。
    尺寸值与 sticker-decoration.ts 的 widget 内联样式保持一致(vertical-align: middle)。 */
 .markdown-body img[src^="/stickers/"],
@@ -209,3 +239,21 @@
 .markdown-body th,
 .markdown-body td { @apply border border-zinc-200 px-3 py-1.5 text-left; }
 .markdown-body th { @apply bg-zinc-50 text-zinc-900 font-medium; }
+
+/* ── 工具栏紧凑化 ──
+   showToolbarName 下 14 个带名字的按钮在窄栏(发帖主内容列 ~603px)会横向溢出、
+   把「更多/预览/全屏」挤到视口外。收紧按钮内边距 + 名字字号,让全部按钮 + 名字
+   不横向滚动。md-editor 全局样式是 `.md-editor .md-editor-stn .md-editor-toolbar-item`
+   (内边距 6px),这里用更高优先级选择器覆盖;名字字号同样提高优先级。 */
+.md-editor .md-editor-stn .md-editor-toolbar-item {
+  padding-block: 0;
+  padding-inline: 1px;
+  margin-inline: 1px;
+}
+.md-editor .md-editor-toolbar-item-name {
+  font-size: 10px;
+  line-height: 12px;
+}
+.md-editor .md-editor-toolbar {
+  gap: 2px;
+}

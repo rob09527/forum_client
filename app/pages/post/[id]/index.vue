@@ -1,17 +1,7 @@
 <template>
   <div class="max-w-3xl mx-auto space-y-4">
-    <!-- 未登录：登录引导（详情接口需登录，SSR/首帧未登录先提示，与 /my/posts 同策略） -->
-    <div v-if="!isLoggedIn" class="panel p-10 text-center">
-      <p class="text-sm text-zinc-600 mb-4">登录后查看帖子内容</p>
-      <button
-        class="px-4 py-1.5 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
-        @click="openLogin"
-      >
-        登录
-      </button>
-    </div>
-
-    <template v-else>
+    <!-- 游客可直接阅读正文；点赞/收藏/评论/打赏在各自操作处引导登录 -->
+    <template>
       <!-- 加载中 -->
       <div v-if="pending" class="panel p-10 text-center text-sm text-zinc-500">
         加载中…
@@ -27,7 +17,7 @@
       <article v-else class="panel p-6">
         <!-- 标题 + 置顶/热门标 -->
         <div class="flex items-center gap-2 mb-3">
-          <span v-if="post.isPinned" class="text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600 font-medium">📌 置顶</span>
+          <span v-if="post.isPinned" class="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600 font-medium"><AppIcon name="pin" :size="12" /> 置顶</span>
           <h1 class="text-xl font-semibold text-zinc-900 leading-snug">{{ post.title }}</h1>
         </div>
 
@@ -52,7 +42,7 @@
           class="mb-4 px-4 py-3 rounded-md border text-sm flex items-center gap-2 flex-wrap"
           :class="bountyBannerClass"
         >
-          <span class="font-medium text-amber-700">💰 {{ post.bountyAmount }}🍗 悬赏</span>
+          <span class="font-medium text-amber-700 inline-flex items-center gap-1"><AppIcon name="coins" :size="14" /> {{ post.bountyAmount }}🍗 悬赏</span>
           <span class="text-xs px-1.5 py-0.5 rounded bg-white/70 font-medium text-zinc-600">
             {{ BountyStatusLabel[post.bountyStatus] }}
           </span>
@@ -67,8 +57,8 @@
               取消悬赏
             </button>
           </template>
-          <span v-else-if="post.bountyStatus === 'settled'" class="text-xs text-emerald-600">
-            ✅ 回答者已获得 {{ bountyPayout }}🍗（已扣除 {{ bountyFeePct }}% 手续费）
+          <span v-else-if="post.bountyStatus === 'settled'" class="text-xs text-emerald-600 inline-flex items-center gap-1">
+            <AppIcon name="check-circle" :size="14" /> 回答者已获得 {{ bountyPayout }}🍗（已扣除 {{ bountyFeePct }}% 手续费）
           </span>
           <span v-else class="text-xs text-zinc-500">金额已全额退回发起人</span>
         </div>
@@ -90,9 +80,9 @@
           </div>
           <!-- 统计 -->
           <div class="flex items-center gap-3 text-xs text-zinc-500 flex-shrink-0">
-            <span>👁 {{ formatCount(post.viewCount) }}</span>
-            <span>👍 {{ likeCount }}</span>
-            <span>💬 {{ commentCount }}</span>
+            <span class="inline-flex items-center gap-1"><AppIcon name="eye" :size="13" /> {{ formatCount(post.viewCount) }}</span>
+            <span class="inline-flex items-center gap-1"><AppIcon name="thumbs-up" :size="13" /> {{ likeCount }}</span>
+            <span class="inline-flex items-center gap-1"><AppIcon name="message-square" :size="13" /> {{ commentCount }}</span>
           </div>
         </div>
 
@@ -109,36 +99,36 @@
             :class="liked ? 'bg-blue-500/20 text-blue-600' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700'"
             @click="toggleLike"
           >
-            👍 {{ liked ? '已点赞' : '点赞' }}
+            <AppIcon name="thumbs-up" :size="15" /> {{ liked ? '已点赞' : '点赞' }}
           </button>
           <button
             class="flex items-center gap-1.5 px-4 py-1.5 text-sm rounded-md transition-colors"
             :class="bookmarked ? 'bg-amber-500/20 text-amber-600' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700'"
             @click="toggleBookmarkClick"
           >
-            🔖 {{ bookmarked ? '已收藏' : '收藏' }}
+            <AppIcon name="bookmark" :size="15" /> {{ bookmarked ? '已收藏' : '收藏' }}
           </button>
-          <!-- 打赏入口：不能赏自己 [CANNOT_TIP_SELF] -->
+          <!-- 打赏入口：不能赏自己 [CANNOT_TIP_SELF]；游客点击先引导登录 -->
           <button
             v-if="!isAuthor"
             class="flex items-center gap-1.5 px-4 py-1.5 text-sm rounded-md transition-colors bg-zinc-100 hover:bg-zinc-200 text-amber-700"
-            @click="tipOpen = true"
+            @click="openTip"
           >
             🍗 赏
           </button>
           <NuxtLink
             v-if="isAuthor"
             :to="`/post/${post.id}/edit`"
-            class="text-sm text-zinc-600 hover:text-blue-700 transition-colors"
+            class="text-sm text-zinc-600 hover:text-blue-700 transition-colors inline-flex items-center gap-1"
           >
-            ✏️ 编辑
+            <AppIcon name="edit" :size="14" /> 编辑
           </NuxtLink>
           <button
             v-if="isAuthor"
-            class="text-sm text-zinc-600 hover:text-red-600 transition-colors"
+            class="text-sm text-zinc-600 hover:text-red-600 transition-colors inline-flex items-center gap-1"
             @click="remove"
           >
-            🗑 删除
+            <AppIcon name="trash" :size="14" /> 删除
           </button>
         </div>
       </article>
@@ -175,7 +165,7 @@
 
       <!-- 评论区 -->
       <section v-if="post" class="panel p-6">
-        <h2 class="text-sm font-medium text-zinc-700 mb-4">💬 {{ commentCount }} 条评论</h2>
+        <h2 class="text-sm font-medium text-zinc-700 mb-4 inline-flex items-center gap-1"><AppIcon name="message-square" :size="14" /> {{ commentCount }} 条评论</h2>
 
         <!-- 发评论 -->
         <div class="mb-6">
@@ -187,7 +177,7 @@
           />
           <div class="flex items-center justify-end mt-2">
             <button
-              class="px-4 py-1.5 text-sm bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white rounded-md transition-colors"
+              class="btn btn-primary px-4 py-1.5 text-sm"
               :disabled="commentSubmitting || !newComment.trim()"
               @click="submitComment"
             >
@@ -249,7 +239,7 @@ const { user, isLoggedIn, openLogin } = useAuth()
 const { bountyConfig } = useGameConfig()
 const { cancel: cancelBounty } = useBounty()
 
-// ── 帖子数据（详情接口需登录；SSR 未登录 401 返回 null，登录后重拉） ──
+// ── 帖子数据（游客可读；登录后注入 isBookmarked 等个性化字段） ──
 const { data: post, pending, refresh: refreshPost } = useAsyncData<PostDetail | null>(
   `post-${postId}`,
   () => (postIdValid ? getPost(postId).catch(() => null) : Promise.resolve(null))
@@ -261,11 +251,10 @@ const { pending: commentPending, refresh: refreshComments } = useAsyncData(
   () => (postIdValid ? loadComments(postId) : Promise.resolve())
 )
 
-// 登录态从 null → 有值时重新拉取（详情/评论在登录后才需要）。
-// 仅在帖子尚未加载成功时补拉（如 SSR 未登录 401 后登录成功），
-// 已有数据时跳过，避免 hydration/已登录访问时重复请求
+// 游客登录后重拉详情/评论，注入 isBookmarked 等个性化字段
+// （游客态已能拉到正文，此处只在登录态翻转时补一次个性化数据）
 watch(isLoggedIn, (v) => {
-  if (v && !post.value) {
+  if (v) {
     refreshPost()
     refreshComments()
   }
@@ -337,6 +326,14 @@ function remove() {
 
 // ── 打赏 ──
 const tipOpen = ref(false)
+/** 打开打赏弹窗；游客先引导登录 */
+function openTip() {
+  if (!isLoggedIn.value) {
+    openLogin()
+    return
+  }
+  tipOpen.value = true
+}
 /** 打赏成功 → 递增，触发 PostTipSummary 重新拉取 */
 const tipRefreshKey = ref(0)
 /** TipModal 目标名（post 在外层 v-else 链之外可为 null，守卫取值） */

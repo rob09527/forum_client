@@ -13,6 +13,8 @@ const props = defineProps<{
   /** md-editor 注入的通用插入方法:insert((selectedText) => InsertParam) */
   insert?: Insert
   disabled?: boolean
+  /** md-editor 注入的 showToolbarName,控制图标下方是否显示名称 */
+  showToolbarName?: boolean
 }>()
 
 /** 预置色板(12 常用色),来自设计系统常用色,均可安全用于 style */
@@ -60,13 +62,14 @@ function onSelect(color: string) {
     type="button"
     class="md-editor-toolbar-item"
     :disabled="disabled"
-    title="字体颜色"
+    title="字体颜色：选中文字后点击上色"
     aria-label="字体颜色"
     @click="toggle"
   >
     <span class="text-base leading-none font-semibold text-red-600" aria-hidden="true">A
       <span class="block h-0.5 w-3.5 bg-current mx-auto mt-0.5"></span>
     </span>
+    <span v-if="showToolbarName" class="md-editor-toolbar-item-name">颜色</span>
   </button>
 
   <Teleport to="body">

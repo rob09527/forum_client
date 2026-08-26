@@ -4,10 +4,11 @@
     class="panel w-full flex items-center gap-2 px-6 py-3 text-sm text-amber-700 hover:bg-amber-50/60 transition-colors text-left"
     @click="goMine"
   >
-    <span>⏰</span>
+    <AppIcon name="clock" :size="15" class="shrink-0" />
     <span>
       「{{ nearest.renderValue }}」还有
-      <span class="font-semibold">{{ nearest.daysLeft }} 天</span> 到期，去续费 →
+      <span class="font-semibold">{{ nearest.daysLeft }} 天</span> 到期，去续费
+      <AppIcon name="chevron-right" :size="13" class="inline-block align-middle" />
     </span>
   </button>
 </template>

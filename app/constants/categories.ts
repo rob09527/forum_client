@@ -560,10 +560,10 @@ export const subTags: string[] = [
   'Agent评测CN', '工具调用评测',
 ]
 
-/** 排序选项（与后端 sort 参数对齐：latest 最新 / hot 热门） */
+/** 排序选项（与后端 sort 参数对齐：latest 最新 / hot 热门；图标为 AppIcon name，UI 升级阶段2 SVG 化） */
 export const sortOptions: SortOption[] = [
-  { label: '📄 最新', value: 'latest' },
-  { label: '🔥 热门', value: 'hot' },
+  { label: '最新', value: 'latest', icon: 'file-text' },
+  { label: '热门', value: 'hot', icon: 'flame' },
 ]
 
 /** 分类 slug → 颜色映射 */

@@ -42,7 +42,7 @@
               class="inline-flex items-center gap-1 bg-blue-500/15 text-blue-600 text-xs px-2 py-0.5 rounded"
             >
               {{ tag }}
-              <button type="button" class="hover:text-blue-500" @click="removeTag(tag)">×</button>
+              <button type="button" class="hover:text-blue-500 p-0.5" aria-label="移除标签" @click="removeTag(tag)"><AppIcon name="x" :size="11" /></button>
             </span>
             <span v-if="tags.length === 0" class="text-xs text-zinc-600">撰写正文后自动推荐标签</span>
           </div>
@@ -87,32 +87,39 @@
           <span v-if="bountyError" class="text-xs text-red-600">{{ bountyError }}</span>
         </div>
         <!-- 产品 1.6.4 硬性要求：最后一句必须前置告知（紧迫感 + 避免结算争议） -->
-        <p v-if="bountyEnabled" class="text-xs text-zinc-500 mt-2 leading-5">
-          ⓘ 发布后立即扣除。采纳答案后发放给回答者；
+        <p v-if="bountyEnabled" class="text-xs text-zinc-500 mt-2 leading-5 inline-flex items-start gap-1">
+          <AppIcon name="info" :size="13" class="mt-0.5 shrink-0" /> 发布后立即扣除。采纳答案后发放给回答者；
           {{ bountyConfig.timeoutDays }} 天内未采纳，将自动判给最高赞回答。
         </p>
       </div>
 
-      <!-- 正文（完整 Markdown 编辑器：工具栏 + 图片上传 + 表情） -->
+      <!-- 正文（完整 Markdown 编辑器：工具栏 + 图片上传 + 表情；hover 按钮可看用法，右上角可预览） -->
       <div>
         <label class="block text-sm text-zinc-600 mb-1.5">正文</label>
-        <MarkdownEditor v-model="content" toolbar="full" :height="440" />
-        <p class="text-xs text-zinc-600 mt-1">{{ content.length }} 字符</p>
+        <MarkdownEditor
+          v-model="content"
+          toolbar="full"
+          :height="440"
+          placeholder="用 Markdown 撰写正文：支持加粗、列表、图片、表情等。鼠标悬停工具栏按钮可查看用法，右上角可预览排版"
+        />
+        <p class="text-xs mt-1 text-right" :class="content.trim().length < 10 ? 'text-amber-600/90' : 'text-zinc-600'">
+          {{ content.length }} 字符<span v-if="content.trim().length < 10"> · 至少 10 字</span>
+        </p>
       </div>
 
       <!-- 错误提示 -->
       <div
         v-if="error"
-        class="text-sm text-red-600 bg-red-500/10 border border-red-500/30 rounded-md px-3 py-2"
+        class="text-sm text-red-600 bg-red-500/10 border border-red-500/30 rounded-md px-3 py-2 flex items-center gap-1.5"
       >
-        ⚠️ {{ error }}
+        <AppIcon name="alert-triangle" :size="14" class="shrink-0" /> {{ error }}
       </div>
 
       <!-- 操作 -->
       <div class="flex items-center gap-3 pt-1">
         <button
           type="button"
-          class="px-5 py-2 text-sm bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white rounded-md transition-colors"
+          class="btn btn-primary px-5 py-2 text-sm"
           :disabled="submitting"
           @click="submit"
         >

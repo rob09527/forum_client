@@ -166,6 +166,8 @@ export interface NewUser {
 export interface SortOption {
   label: string
   value: string
+  /** 排序 tab 图标（AppIcon name，可选） */
+  icon?: string
 }
 
 // ── 认证相关类型 ──
@@ -653,4 +655,49 @@ export interface PropsConfig {
   quotaPrice: number
   /** 扩容累计上限字节数（默认 500MB） */
   quotaTotalLimit: number
+}
+
+// ── 私信（1v1 会话化）──
+
+/** 私信隐私开关（用户自选：谁能给我发私信） */
+export const DmPrivacy = {
+  /** 所有人可私信 */
+  EVERYONE: 'everyone',
+  /** 仅关注我的人可私信 */
+  FOLLOWERS: 'followers',
+  /** 关闭私信 */
+  NOBODY: 'nobody',
+} as const
+export type DmPrivacyType = (typeof DmPrivacy)[keyof typeof DmPrivacy]
+
+/** 私信隐私开关中文名（隐私设置 UI 用） */
+export const DmPrivacyLabel: Record<DmPrivacyType, string> = {
+  everyone: '所有人',
+  followers: '仅关注我的人',
+  nobody: '关闭私信',
+}
+
+/** 私信消息（与后端 MessageItem 对齐） */
+export interface Message {
+  id: number
+  conversationId: number
+  senderId: number
+  content: string
+  /** 发送时间，ISO 8601 */
+  createdAt: string
+  /** 已读时间，ISO 8601；v1 恒为 null */
+  readAt: string | null
+}
+
+/** 私信会话摘要（与后端 ConversationSummary 对齐） */
+export interface ConversationSummary {
+  id: number
+  /** 对方用户摘要（AuthorBrief） */
+  otherUser: AuthorBrief
+  /** 最后一条消息预览 */
+  lastMessagePreview: string | null
+  /** 最后消息时间，ISO 8601 */
+  lastMessageAt: string | null
+  /** 我这一侧的未读数 */
+  unreadCount: number
 }

@@ -19,11 +19,11 @@
             <h3 class="text-base font-semibold text-zinc-800 truncate">{{ title }}</h3>
             <button
               v-if="closable"
-              class="text-zinc-400 hover:text-zinc-900 transition-colors text-lg leading-none shrink-0 ml-3"
+              class="w-7 h-7 flex items-center justify-center rounded-md text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-colors shrink-0 ml-3"
               aria-label="关闭"
               @click="close"
             >
-              ✕
+              <AppIcon name="x" :size="16" />
             </button>
           </div>
 
