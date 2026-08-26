@@ -58,8 +58,9 @@ async function load(): Promise<void> {
       `${apiBase.value}/api/me/dm-privacy`
     )
     privacy.value = res.data.privacy
-  } catch {
-    // 隐私设置读取失败保持默认值
+  } catch (err) {
+    // 隐私设置读取失败保持默认值，仅留痕
+    console.warn('[dm] 拉取私信隐私设置失败', err)
   }
 }
 
@@ -72,7 +73,7 @@ async function select(value: DmPrivacyType): Promise<void> {
     )
     privacy.value = res.data.privacy
     toast.add({ title: '私信设置已更新', color: 'success' })
-  } catch (err: any) {
+  } catch (err) {
     toast.add({ title: extractErrorMessage(err, '更新失败'), color: 'error' })
   }
 }

@@ -1,8 +1,7 @@
 <template>
   <div class="max-w-3xl mx-auto space-y-4">
     <!-- 游客可直接阅读正文；点赞/收藏/评论/打赏在各自操作处引导登录 -->
-    <template>
-      <!-- 加载中 -->
+    <!-- 加载中 -->
       <div v-if="pending" class="panel p-10 text-center text-sm text-zinc-500">
         加载中…
       </div>
@@ -47,7 +46,13 @@
             {{ BountyStatusLabel[post.bountyStatus] }}
           </span>
           <template v-if="post.bountyStatus === 'escrow'">
-            <span class="text-xs text-zinc-500 font-mono tabular-nums">剩余 {{ bountyCountdown.text }}</span>
+            <!-- 倒计时基于 Date.now()，SSR 与客户端渲染必然不同，必须 ClientOnly 包裹（data-allow-mismatch 不是 Vue 属性，不抑制水合告警） -->
+            <ClientOnly>
+              <span class="text-xs text-zinc-500 font-mono tabular-nums">剩余 {{ bountyCountdown.text }}</span>
+              <template #fallback>
+                <span class="text-xs text-zinc-500 font-mono tabular-nums" aria-hidden="true">剩余 --:--:--</span>
+              </template>
+            </ClientOnly>
             <span class="text-xs text-zinc-500">{{ bountyConfig.timeoutDays }} 天未采纳将自动判给最高赞回答</span>
             <button
               v-if="isAuthor"
@@ -206,7 +211,6 @@
           <p class="text-sm text-zinc-600">还没有评论，来抢沙发吧～</p>
         </div>
       </section>
-    </template>
   </div>
 </template>
 
@@ -233,7 +237,7 @@ const postId = Number(route.params.id)
 const postIdValid = Number.isInteger(postId) && postId > 0
 
 const { getPost, removePost, likePost, unlikePost } = usePosts()
-const { comments, loadComments, createComment } = useComments()
+const { loadComments, createComment } = useComments()
 const { toggleBookmark } = useBookmarks()
 const { user, isLoggedIn, openLogin } = useAuth()
 const { bountyConfig } = useGameConfig()
@@ -246,9 +250,9 @@ const { data: post, pending, refresh: refreshPost } = useAsyncData<PostDetail | 
 )
 
 // ── 评论数据（SSR 也加载，避免首屏闪"还没有评论"；操作后用 refresh 重拉） ──
-const { pending: commentPending, refresh: refreshComments } = useAsyncData(
+const { data: commentsData, pending: commentPending, refresh: refreshComments } = useAsyncData<CommentTreeItem[]>(
   `post-comments-${postId}`,
-  () => (postIdValid ? loadComments(postId) : Promise.resolve())
+  () => (postIdValid ? loadComments(postId) : Promise.resolve([]))
 )
 
 // 游客登录后重拉详情/评论，注入 isBookmarked 等个性化字段
@@ -434,8 +438,9 @@ async function doCancelBounty() {
 const acceptedCommentId = computed(() => post.value?.bountyAcceptedCommentId ?? null)
 const orderedComments = computed<CommentTreeItem[]>(() => {
   const acc = acceptedCommentId.value
-  if (!acc) return comments.value
-  return [...comments.value].sort((a, b) => {
+  const items = commentsData.value ?? []
+  if (!acc) return items
+  return [...items].sort((a, b) => {
     if (a.id === acc) return -1
     if (b.id === acc) return 1
     return 0

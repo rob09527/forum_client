@@ -133,15 +133,17 @@ watch(
 const hotPosts = ref<{ id: number; title: string }[]>([])
 // 侧边栏最新注册用户（来自后端 /api/users/latest，默认 8 条）
 const newUsers = ref<NewUser[]>([])
-if (import.meta.client) {
-  // 客户端异步加载，不阻塞首屏
+// 必须在 onMounted（hydration 完成后）再拉取，不能放 setup 阶段：
+// import.meta.client 在 setup 里发起、本地 API 又极快，数据会在 hydration 完成前就位，
+// 造成 SSR（空列表）与客户端（有数据）DOM 子节点数不一致 → replaceChild hydration 报错整页挂掉。
+onMounted(() => {
   getHotPosts()
     .then((posts) => { hotPosts.value = posts })
     .catch(() => {})
   getLatestUsers(8)
     .then((users) => { newUsers.value = users })
     .catch(() => {})
-}
+})
 
 // 应用启动时恢复登录状态
 if (import.meta.client) {

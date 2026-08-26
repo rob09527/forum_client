@@ -43,7 +43,7 @@ async function submit(): Promise<void> {
     await sendMessage(content)
     text.value = ''
     nextTick(autoResize)
-  } catch (err: any) {
+  } catch (err) {
     toast.add({ title: extractErrorMessage(err, '发送失败'), color: 'error' })
   } finally {
     sending.value = false

@@ -38,8 +38,9 @@ export function useMessages() {
         `${apiBase.value}/api/me/conversations/unread-count`
       )
       unread.value = res.data.count
-    } catch {
-      // 未读数是增强信息，失败静默
+    } catch (err) {
+      // 未读数是增强信息，失败不打扰用户，仅留痕便于排查
+      console.warn('[dm] 拉取未读数失败', err)
     }
   }
 
@@ -151,10 +152,10 @@ export function useMessages() {
         if (!messages.value.some((m) => m.id === msg.id)) {
           messages.value = [...messages.value, msg]
         }
-        markRead(convId).catch(() => {})
+        markRead(convId).catch((err) => console.warn('[dm] 自动标记已读失败', err))
       } else {
         // 非当前会话：刷新列表（新消息置顶 + 预览/未读角标）+ 轻提示
-        loadConversations().catch(() => {})
+        loadConversations().catch((err) => console.warn('[dm] 收到新消息后刷新会话列表失败', err))
         toast.add({ title: '收到新私信', color: 'info', duration: 3000 })
       }
     })
@@ -162,7 +163,7 @@ export function useMessages() {
     realtime.onReconnect(() => {
       fetchUnread()
       if (activeConversationId.value !== null) {
-        loadMessages(activeConversationId.value).catch(() => {})
+        loadMessages(activeConversationId.value).catch((err) => console.warn('[dm] 断线补拉消息失败', err))
       }
     })
   }

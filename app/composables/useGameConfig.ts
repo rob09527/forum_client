@@ -71,64 +71,47 @@ export function useGameConfig() {
   const apiBase = useApiBase()
 
   /**
-   * SSR 安全共享状态：用 useState 让服务端拉到的配置经 payload 水合到客户端。
-   * 若用模块级 reactive，SSR 用动态配置、客户端启动时用静态兜底，会触发
-   * hydration 文本不一致（如等级名「鸭腿/鸡腿」打架）导致整页报 500。
+   * SSR 安全：用 useAsyncData 拉配置。Nuxt 在 SSR 阶段确定性等待该请求并写入 payload，
+   * 客户端从 payload 恢复（非 fire-and-forget）。若用 fire-and-forget 的 load()，
+   * SSR 可能没等到配置就用静态兜底（如「鸡腿」）、客户端却快速拉到配置（「鸭腿」），
+   * 触发 hydration 文本不一致导致整页报 500。
    */
-  const state = useState<{ config: GameConfig | null; loading: boolean }>('game-config', () => ({
-    config: null,
-    loading: false,
-  }))
-
-  /** 拉取配置（单例）。组件 setup 调用即可，内部自动发起；失败用兜底值。 */
-  async function load(): Promise<GameConfig> {
-    if (state.value.config) return state.value.config
-    if (!state.value.loading) {
-      state.value.loading = true
+  const { data: config } = useAsyncData<GameConfig | null>(
+    'game-config',
+    async () => {
       try {
         const res = await $fetch<ApiResponse<GameConfig>>(`${apiBase.value}/api/config/game`)
-        state.value.config = res.data
+        return res.data
       } catch {
-        // 请求失败不缓存，下次调用重试；返回兜底保证页面可渲染
-      } finally {
-        state.value.loading = false
+        // 请求失败返回 null → 走前端兜底；useAsyncData 缓存 null，不反复重试
+        return null
       }
-    }
-    return state.value.config ?? {
-      checkin: FALLBACK_CHECKIN,
-      levels: [],
-      shop: FALLBACK_SHOP,
-      tip: FALLBACK_TIP,
-      bounty: FALLBACK_BOUNTY,
-      props: FALLBACK_PROPS,
-    }
-  }
-
-  // 挂载即拉取（幂等：只有首个调用真正发请求，其余复用）
-  load()
+    },
+    { default: () => null }
+  )
 
   /** 签到奖励配置（未加载/失败时用前端兜底默认值） */
-  const checkinConfig = computed<CheckinConfig>(() => state.value.config?.checkin ?? FALLBACK_CHECKIN)
+  const checkinConfig = computed<CheckinConfig>(() => config.value?.checkin ?? FALLBACK_CHECKIN)
 
   /** 商城配置（装饰默认时效/到期提醒提前天数） */
-  const shopConfig = computed<ShopConfig>(() => state.value.config?.shop ?? FALLBACK_SHOP)
+  const shopConfig = computed<ShopConfig>(() => config.value?.shop ?? FALLBACK_SHOP)
 
   /** 打赏配置（快捷档位/自定义区间） */
-  const tipConfig = computed<TipConfig>(() => state.value.config?.tip ?? FALLBACK_TIP)
+  const tipConfig = computed<TipConfig>(() => config.value?.tip ?? FALLBACK_TIP)
 
   /** 悬赏配置（手续费率/超时天数/门槛） */
-  const bountyConfig = computed<BountyConfig>(() => state.value.config?.bounty ?? FALLBACK_BOUNTY)
+  const bountyConfig = computed<BountyConfig>(() => config.value?.bounty ?? FALLBACK_BOUNTY)
 
   /** 道具配置（补签/改名/扩容价格与限制） */
-  const propsConfig = computed<PropsConfig>(() => state.value.config?.props ?? FALLBACK_PROPS)
+  const propsConfig = computed<PropsConfig>(() => config.value?.props ?? FALLBACK_PROPS)
 
   /** 等级列表（未加载/失败时为空，等级名回退静态映射） */
-  const levels = computed(() => state.value.config?.levels ?? [])
+  const levels = computed(() => config.value?.levels ?? [])
 
   /** 等级 key → 中文名：配置优先；未加载/未命中回退静态映射；再回退原 key */
   function levelName(level: string | null | undefined): string {
     const key = level ?? ''
-    const found = state.value.config?.levels.find((l) => l.key === key)
+    const found = config.value?.levels.find((l) => l.key === key)
     if (found) return found.name
     return UserLevelLabel[key] ?? key
   }
@@ -137,8 +120,8 @@ export function useGameConfig() {
   function levelBadgeClass(level: string | null | undefined): string {
     const key = level ?? ''
     if (KNOWN_BADGE[key]) return KNOWN_BADGE[key]
-    if (state.value.config?.levels) {
-      const ascending = [...state.value.config.levels].reverse() // 最低 → 最高
+    if (config.value?.levels) {
+      const ascending = [...config.value.levels].reverse() // 最低 → 最高
       const idx = ascending.findIndex((l) => l.key === key)
       if (idx >= 0) return DYNAMIC_BADGE_PALETTE[Math.min(idx, DYNAMIC_BADGE_PALETTE.length - 1)] ?? 'bg-zinc-200 text-zinc-600'
     }
@@ -146,7 +129,6 @@ export function useGameConfig() {
   }
 
   return {
-    load,
     checkinConfig,
     shopConfig,
     tipConfig,

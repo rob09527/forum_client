@@ -18,8 +18,8 @@ export function useComments() {
   const loading = ref(false)
   const error = ref('')
 
-  /** 加载帖子评论（楼层 + 楼中楼树形结构） */
-  async function loadComments(postId: number): Promise<void> {
+  /** 加载帖子评论（楼层 + 楼中楼树形结构）；返回 items 供 useAsyncData 序列化（SSR 水合一致） */
+  async function loadComments(postId: number): Promise<CommentTreeItem[]> {
     loading.value = true
     error.value = ''
     try {
@@ -27,8 +27,10 @@ export function useComments() {
         `${apiBase.value}/api/posts/${postId}/comments`
       )
       comments.value = res.data.items
-    } catch (err: any) {
+      return res.data.items
+    } catch (err) {
       error.value = extractErrorMessage(err, '加载评论失败')
+      return []
     } finally {
       loading.value = false
     }
