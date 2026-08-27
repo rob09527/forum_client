@@ -8,7 +8,6 @@ import type {
   ShopConfig,
   TipConfig,
 } from '~/types'
-import { UserLevelLabel } from '~/types'
 import { useApiBase } from './api'
 
 /**
@@ -16,7 +15,7 @@ import { useApiBase } from './api'
  * 来源：后端 GET /api/config/game —— 后台经共享 Redis 控制，未配置时后端返回默认值。
  *
  * 模块级单例缓存：多组件/并发只拉一次；请求失败用前端兜底值，不阻塞页面渲染。
- * 等级名/徽章在配置加载前回退 UserLevelLabel 静态映射与默认配色，加载后以配置为准。
+ * 等级名与徽章色完全来自服务器配置：name 取配置，徽章色按等级从低到高的名次取色（零硬编码）。
  */
 
 /** 前端兜底签到配置：与后端默认值保持一致（后端 Redis 缺失时也返回这些值） */
@@ -50,21 +49,26 @@ const FALLBACK_PROPS: PropsConfig = {
   quotaTotalLimit: 500 * 1024 * 1024,
 }
 
-/** 已知三档等级徽章配色（保持原视觉） */
-const KNOWN_BADGE: Record<string, string> = {
-  claw: 'bg-zinc-200 text-zinc-600',
-  leg: 'bg-amber-500/20 text-amber-600',
-  meat: 'bg-red-500/20 text-red-600',
-}
+/** 中性灰：空 key / 未命中等级时的兜底徽章色 */
+const NEUTRAL_BADGE = 'bg-zinc-200 text-zinc-600'
 
-/** 动态等级徽章调色板：按升序排名从最低（灰）到最高（红/紫） */
-const DYNAMIC_BADGE_PALETTE = [
+/**
+ * 等级徽章调色板：按「从低到高的名次」取色（纯排名制，零 key→色 硬编码）。
+ * 前 3 档保持原 claw/leg/meat 观感（灰/琥珀/红），后续依次循环，任意档数都可兜底。
+ */
+const LEVEL_BADGE_PALETTE = [
   'bg-zinc-200 text-zinc-600',
-  'bg-sky-500/20 text-sky-600',
-  'bg-emerald-500/20 text-emerald-600',
   'bg-amber-500/20 text-amber-600',
   'bg-red-500/20 text-red-600',
+  'bg-sky-500/20 text-sky-600',
+  'bg-emerald-500/20 text-emerald-600',
   'bg-violet-500/20 text-violet-600',
+  'bg-orange-500/20 text-orange-600',
+  'bg-pink-500/20 text-pink-600',
+  'bg-cyan-500/20 text-cyan-600',
+  'bg-lime-500/20 text-lime-600',
+  'bg-indigo-500/20 text-indigo-600',
+  'bg-teal-500/20 text-teal-600',
 ]
 
 export function useGameConfig() {
@@ -105,27 +109,23 @@ export function useGameConfig() {
   /** 道具配置（补签/改名/扩容价格与限制） */
   const propsConfig = computed<PropsConfig>(() => config.value?.props ?? FALLBACK_PROPS)
 
-  /** 等级列表（未加载/失败时为空，等级名回退静态映射） */
+  /** 等级列表（未加载/失败时为空，等级名回退原 key） */
   const levels = computed(() => config.value?.levels ?? [])
 
-  /** 等级 key → 中文名：配置优先；未加载/未命中回退静态映射；再回退原 key */
+  /** 等级 key → 中文名：取服务器配置；未命中（配置未加载/异常）回退原 key */
   function levelName(level: string | null | undefined): string {
     const key = level ?? ''
-    const found = config.value?.levels.find((l) => l.key === key)
-    if (found) return found.name
-    return UserLevelLabel[key] ?? key
+    return config.value?.levels.find((l) => l.key === key)?.name ?? key
   }
 
-  /** 等级徽章配色：已知三档用原色，其余按配置升序排名取调色板 */
+  /** 等级徽章配色：按等级从低到高的名次自动取色（纯排名制，零 key→色 硬编码） */
   function levelBadgeClass(level: string | null | undefined): string {
     const key = level ?? ''
-    if (KNOWN_BADGE[key]) return KNOWN_BADGE[key]
-    if (config.value?.levels) {
-      const ascending = [...config.value.levels].reverse() // 最低 → 最高
-      const idx = ascending.findIndex((l) => l.key === key)
-      if (idx >= 0) return DYNAMIC_BADGE_PALETTE[Math.min(idx, DYNAMIC_BADGE_PALETTE.length - 1)] ?? 'bg-zinc-200 text-zinc-600'
-    }
-    return 'bg-zinc-200 text-zinc-600'
+    if (!key) return NEUTRAL_BADGE
+    const ascending = [...(config.value?.levels ?? [])].sort((a, b) => a.minTotal - b.minTotal)
+    const rank = ascending.findIndex((l) => l.key === key)
+    if (rank < 0) return NEUTRAL_BADGE
+    return LEVEL_BADGE_PALETTE[rank % LEVEL_BADGE_PALETTE.length] ?? NEUTRAL_BADGE
   }
 
   return {

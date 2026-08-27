@@ -10,7 +10,7 @@ export interface AuthorBrief {
   username: string
   /** 头像 URL，null 时前端用默认头像 */
   avatar: string | null
-  /** 等级标识（claw | leg | meat …） */
+  /** 等级标识 key（由后台配置定义，如 claw / leg / meat …） */
   level: string
   /** 生效中的用户名颜色渲染值（CSS 色值/渐变）；null 或已过期则不上色 */
   decorColorValue: string | null
@@ -172,13 +172,6 @@ export interface SortOption {
 
 // ── 认证相关类型 ──
 
-/** 用户等级中文映射 */
-export const UserLevelLabel: Record<string, string> = {
-  claw: '鸡爪',
-  leg: '鸡腿',
-  meat: '鸡肉',
-}
-
 /** 用户公开信息（与后端 UserPublic 对齐） */
 export interface User {
   id: number
@@ -238,7 +231,7 @@ export interface AuthResult {
 
 /** 等级进度：当前等级 + 下一门槛 + 还差多少（与后端 LevelProgress 对齐）[R21] */
 export interface LevelProgress {
-  /** 当前等级：claw | leg | meat */
+  /** 当前等级 key（由后台配置定义） */
   level: string
   /** 下一等级所需累计鸡腿，最高等级为 null */
   nextLevelAt: number | null
@@ -252,7 +245,7 @@ export interface UserProfile {
   username: string
   avatar: string | null
   bio: string | null
-  /** 用户等级（claw | leg | meat） */
+  /** 用户等级 key（由后台配置定义） */
   level: string
   /** 鸡腿余额。仅本人可见，陌生人返回 null */
   points: number | null

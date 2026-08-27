@@ -414,14 +414,14 @@ watch(isOwnProfile, (own) => {
 }, { immediate: true })
 
 // ── 展示辅助 ──
-// 等级名来自后台配置，未加载时回退静态映射（等级徽章已由 UsernameText 统一渲染，此处不再重复）
-const { levelName } = useGameConfig()
+// 等级名与下一等级名均来自后台配置（零硬编码）
+const { levelName, levels } = useGameConfig()
 const levelLabel = computed(() => levelName(profile.value?.level))
 const nextLevelLabel = computed(() => {
   const next = profile.value?.levelProgress.nextLevelAt
   if (next === null || next === undefined) return ''
-  // 按门槛反推下一等级：500 → 鸡肉；100 → 鸡腿
-  return next >= 500 ? '鸡肉' : next >= 100 ? '鸡腿' : '鸡爪'
+  // 下一等级名按门槛反查配置；未命中回退空
+  return levels.value.find((l) => l.minTotal === next)?.name ?? ''
 })
 
 /** 等级进度条百分比：当前累计 / 下一门槛 */
