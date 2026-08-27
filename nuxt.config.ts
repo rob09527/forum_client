@@ -5,6 +5,20 @@ export default defineNuxtConfig({
 
   devtools: { enabled: true },
 
+  // 站点级 head：标签页展示品牌名 AI Base + favicon（此前缺失，测试服标签页只显示域名）
+  app: {
+    head: {
+      title: 'AI Base',
+      meta: [
+        { name: 'description', content: 'AI Base —— 积分消费、打赏悬赏、店铺装扮的社区论坛' },
+        { name: 'theme-color', content: '#2563eb' },
+      ],
+      link: [
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+      ],
+    },
+  },
+
   modules: ['@nuxt/ui', '@vueuse/nuxt'],
 
   // 组件按文件名的 PascalCase 命名,子目录不加前缀(与现有 post/PostForm、comment/CommentItem 约定一致)
