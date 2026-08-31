@@ -76,6 +76,8 @@ export const ICONS: Record<string, string> = {
   send: `<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/>`,
   award: `<circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>`,
   'circle-dollar-sign': `<circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/>`,
+  'arrow-down-left': `<path d="M17 7 7 17"/><path d="M17 17H7V7"/>`,
+  'arrow-up-right': `<path d="M7 17 17 7"/><path d="M7 7h10v10"/>`,
 
   // ── 头像风格图标（avatar.ts STYLE_META 的 icon 字段，商城风格 pill / 头像选择器共用；
   //    由 emoji 全面 SVG 化替换，选中态随 currentColor 变白，不再与蓝底冲突）──

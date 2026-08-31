@@ -8,14 +8,6 @@
     <div class="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-slate-400/25 via-slate-400/10 to-transparent" aria-hidden="true" />
     <!-- Row 1: Logo + 搜索 + 用户 -->
     <div class="flex items-center h-12">
-      <!-- 移动端：汉堡按钮 → 打开板块抽屉（lg:hidden，仅手机） -->
-      <button
-        class="lg:hidden w-8 h-8 -ml-1 flex items-center justify-center rounded-md text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors shrink-0"
-        aria-label="菜单"
-        @click="toggleLeftDrawer"
-      >
-        <AppIcon name="menu" :size="18" />
-      </button>
       <!-- Logo：负空间融合——无卡片无阴影，直接落在毛玻璃导航栏上，保持通透轻盈（千问 §7.13） -->
       <a href="/" class="flex items-center gap-2 whitespace-nowrap flex-shrink-0 lg:w-44 group">
         <!-- Logo 图形：蓝底圆角块 + 白色芯片方块 + 四角电路触点（算力/Base 底层语义） -->
@@ -41,7 +33,7 @@
       </a>
 
       <!-- 搜索（左对齐帖子列表后，再整体右移 5%） -->
-      <div class="relative flex-1 max-w-md ml-4 lg:ml-[calc(2rem+5%)]">
+      <div class="relative flex-1 max-w-md ml-4 lg:ml-8">
         <input
           v-model="searchText"
           type="text"
@@ -57,7 +49,7 @@
       </div>
 
       <!-- 用户区（靠右） -->
-      <div class="ml-auto flex-shrink-0 flex items-center gap-2">
+      <div class="ml-auto flex-shrink-0 flex items-center gap-1.5">
         <!-- 未登录：登录 + 注册 -->
         <template v-if="!isLoggedIn">
           <button
@@ -76,32 +68,55 @@
         </template>
         <!-- 已登录 -->
         <template v-else>
+          <!-- 签到 - 仅移动端显示，与通知、私信统一风格 -->
+          <NuxtLink
+            to="/checkin"
+            class="lg:hidden relative flex items-center justify-center w-8 h-8 rounded-md hover:bg-zinc-100 transition-all group"
+            title="每日签到"
+          >
+            <span class="text-zinc-600 group-hover:text-blue-600 transition-colors group-hover:scale-110 inline-block">
+              <AppIcon name="calendar" :size="16" />
+            </span>
+            <!-- hover时显示文字提示 -->
+            <span class="absolute top-full mt-1 px-2 py-1 bg-zinc-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+              签到
+            </span>
+          </NuxtLink>
+
           <!-- 通知铃铛 + 未读红点 → 通知中心 -->
           <NuxtLink
             to="/notifications"
-            class="relative flex items-center justify-center w-8 h-8 rounded-md hover:bg-zinc-100 transition-colors"
+            class="relative flex items-center justify-center w-8 h-8 rounded-md hover:bg-zinc-100 transition-all group"
             title="通知"
           >
-            <span class="text-zinc-600"><AppIcon name="bell" :size="16" /></span>
+            <span class="text-zinc-600 group-hover:text-blue-600 transition-colors group-hover:scale-110 inline-block"><AppIcon name="bell" :size="16" /></span>
             <span
               v-if="unread > 0"
-              class="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-medium flex items-center justify-center"
+              class="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-medium flex items-center justify-center animate-pulse"
             >
               {{ unread > 99 ? '99+' : unread }}
+            </span>
+            <!-- hover时显示文字提示 -->
+            <span class="absolute top-full mt-1 px-2 py-1 bg-zinc-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+              通知
             </span>
           </NuxtLink>
           <!-- 私信信封 + 未读红点 → 私信中心 -->
           <NuxtLink
             to="/messages"
-            class="relative flex items-center justify-center w-8 h-8 rounded-md hover:bg-zinc-100 transition-colors"
+            class="relative flex items-center justify-center w-8 h-8 rounded-md hover:bg-zinc-100 transition-all group"
             title="私信"
           >
-            <span class="text-zinc-600"><AppIcon name="mail" :size="16" /></span>
+            <span class="text-zinc-600 group-hover:text-blue-600 transition-colors group-hover:scale-110 inline-block"><AppIcon name="mail" :size="16" /></span>
             <span
               v-if="dmUnread > 0"
-              class="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-medium flex items-center justify-center"
+              class="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-medium flex items-center justify-center animate-pulse"
             >
               {{ dmUnread > 99 ? '99+' : dmUnread }}
+            </span>
+            <!-- hover时显示文字提示 -->
+            <span class="absolute top-full mt-1 px-2 py-1 bg-zinc-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+              私信
             </span>
           </NuxtLink>
           <div ref="dropdownRef" class="relative">
@@ -130,11 +145,25 @@
                   <AppIcon name="user" :size="14" /> 个人主页
                 </NuxtLink>
                 <NuxtLink
+                  to="/me/points"
+                  class="w-full px-4 py-2 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors text-left flex items-center gap-2"
+                  @click="showDropdown = false"
+                >
+                  <AppIcon name="scroll" :size="14" /> 积分流水
+                </NuxtLink>
+                <NuxtLink
                   to="/messages"
                   class="w-full px-4 py-2 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors text-left flex items-center gap-2"
                   @click="showDropdown = false"
                 >
                   <AppIcon name="mail" :size="14" /> 我的私信
+                </NuxtLink>
+                <NuxtLink
+                  to="/my/posts"
+                  class="w-full px-4 py-2 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors text-left flex items-center gap-2"
+                  @click="showDropdown = false"
+                >
+                  <AppIcon name="file-text" :size="14" /> 我的帖子
                 </NuxtLink>
                 <NuxtLink
                   to="/my/bookmarks"
@@ -185,7 +214,6 @@
 
 <script setup lang="ts">
 const { user, isLoggedIn, logout, openLogin, openRegister } = useAuth()
-const { toggleLeftDrawer } = useAppLayout()
 const realtime = useRealtime()
 const { unread, fetchUnread, setupRealtime: setupNotifRealtime } = useNotifications()
 const { unread: dmUnread, fetchUnread: fetchDmUnread, setupRealtime: setupDmRealtime } = useMessages()
