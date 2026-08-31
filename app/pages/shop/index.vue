@@ -1,10 +1,13 @@
 <template>
   <div class="max-w-5xl mx-auto space-y-4">
+    <!-- tips 轮播 -->
+    <TipsBanner />
+
     <!-- 到期提醒横幅 [1.3.4] -->
     <ShopBanner v-if="expiringSoon.length" :items="expiringSoon" />
 
     <!-- Tab（URL query 驱动，?tab=mine 直达「我的」；顶部不展示余额）。
-         tabs 保留右侧定位（ml-auto）：原面板即「余额在左 + tabs 靠右」，去余额后 tabs 归位、左侧留白更干净 -->
+         手机端：移除右上角分类按钮，改用商品区域的可点击指示器 -->
     <div class="panel px-5 py-3 flex items-center gap-3">
       <div class="ml-auto flex items-center gap-1">
         <button
@@ -27,9 +30,10 @@
         商城筹备中，稍后就能用鸡腿换装饰啦～
       </div>
       <!-- 商品网格无条件展示：没鸡腿也能自由浏览（余额不足时点购买自会提示），不做「余额不够就锁住整个商城」的限制 -->
-      <!-- 称号 / 颜色 切换子 tab：不全部铺满，一次只展示一个分区 -->
+      <!-- 称号 / 颜色 切换子 tab：PC端横向展示，手机端隐藏（改用右上角侧边栏） -->
       <template v-else>
-        <div class="flex items-center gap-2 px-1">
+        <!-- PC端：横向分类按钮 -->
+        <div class="hidden lg:flex items-center gap-2 px-1">
           <button
             v-for="st in subTabs"
             :key="st.value"
@@ -41,8 +45,26 @@
           </button>
         </div>
 
+        <!-- 手机端：当前分类指示器 + 点击切换提示 -->
+        <div class="lg:hidden px-1 py-2">
+          <button
+            class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 hover:border-blue-300 transition-all"
+            @click="drawerOpen = true"
+          >
+            <div class="flex items-center gap-2">
+              <AppIcon :name="currentSubTab.icon" :size="16" class="text-blue-600" />
+              <span class="text-sm font-medium text-zinc-800">{{ currentSubTab.label }}</span>
+              <span class="text-xs text-zinc-500">（{{ currentSubTab.count }} 件）</span>
+            </div>
+            <div class="flex items-center gap-1 text-blue-600">
+              <span class="text-xs">切换</span>
+              <AppIcon name="chevron-right" :size="14" />
+            </div>
+          </button>
+        </div>
+
         <!-- 头像风格切换：一次只看一个风格的 20 个，避免 400 个头像全铺开 -->
-        <div v-if="subTab === 'avatar'" class="flex flex-wrap gap-2 px-1 mt-3">
+        <div v-if="subTab === 'avatar'" class="flex flex-wrap gap-2 px-1 lg:mt-3">
           <button
             v-for="s in avatarStyleDefs"
             :key="s.id"
@@ -54,7 +76,7 @@
           </button>
         </div>
 
-        <!-- 每页 6 条（3 列 × 2 行） -->
+        <!-- 每页 6 条（3 列 × 2 行）PC端；手机端 2 列 -->
         <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
           <ShopItemCard v-for="item in pagedItems" :key="item.id" :item="item" @buy="openBuy(item)" />
         </div>
@@ -94,8 +116,8 @@
         还没买过装饰，去挑一件吧～
       </div>
       <div v-else class="space-y-3">
-        <!-- 我的 称号/颜色切换（同商城分区，不做下拉铺满） -->
-        <div class="flex items-center gap-2 px-1">
+        <!-- 我的 称号/颜色切换：PC端横向展示，手机端改为竖向列表 -->
+        <div class="hidden lg:flex items-center gap-2 px-1">
           <button
             v-for="mt in mineSubTabs"
             :key="mt.value"
@@ -104,6 +126,22 @@
             @click="switchMineSubTab(mt.value)"
           >
             <AppIcon :name="mt.icon" :size="14" /> {{ mt.label }}（{{ mt.count }}）
+          </button>
+        </div>
+
+        <!-- 手机端：当前分类指示器 -->
+        <div class="lg:hidden flex items-center gap-2 px-1">
+          <button
+            v-for="mt in mineSubTabs"
+            :key="mt.value"
+            class="flex-1 px-3 py-2.5 text-sm rounded-lg transition-colors flex items-center justify-center gap-1.5"
+            :class="mineSubTab === mt.value ? 'bg-blue-500 text-white font-medium' : 'bg-zinc-50 text-zinc-600 hover:bg-zinc-100'"
+            @click="switchMineSubTab(mt.value)"
+          >
+            <AppIcon :name="mt.icon" :size="14" />
+            <span class="hidden sm:inline">{{ mt.label }}</span>
+            <span class="sm:hidden">{{ mt.label.replace('专属称号', '称号').replace('用户名颜色', '颜色') }}</span>
+            <span class="text-xs opacity-75">({{ mt.count }})</span>
           </button>
         </div>
         <div class="panel p-4">
@@ -123,6 +161,14 @@
 
     <!-- 购买确认弹窗（试戴预览 + 确认） -->
     <ShopBuyModal v-model="buyModalOpen" :item="buyItem" @bought="onBought" />
+
+    <!-- 手机端分类侧边栏 -->
+    <ShopCategoryDrawer
+      v-model="drawerOpen"
+      :active-category="subTab"
+      :categories="subTabs"
+      @select="switchSubTab"
+    />
   </div>
 </template>
 
@@ -185,12 +231,12 @@ function switchAvatarStyle(style: string) {
 /** 称号 / 颜色 / 头像 子 tab + 分页（每页 6 条 = 3 列 × 2 行）。
  * ?sub=avatar 直达头像分区（AvatarPicker 付费头像跳转用）。 */
 const PAGE_SIZE = 6
-const subTab = ref<ShopItemTypeValue>((route.query.sub as ShopItemTypeValue) === 'avatar' ? 'avatar' : 'title')
+const subTab = ref<ShopItemTypeValue>((route.query.sub as ShopItemTypeValue) || 'avatar')
 const page = ref(0)
 const subTabs = computed(() => [
+  { label: '头像', value: 'avatar' as ShopItemTypeValue, count: avatarItems.value.length, icon: 'user' },
   { label: '专属称号', value: 'title' as ShopItemTypeValue, count: titleItems.value.length, icon: 'medal' },
   { label: '用户名颜色', value: 'username_color' as ShopItemTypeValue, count: colorItems.value.length, icon: 'palette' },
-  { label: '头像', value: 'avatar' as ShopItemTypeValue, count: avatarItems.value.length, icon: 'user' },
 ])
 const currentList = computed(() =>
   subTab.value === 'title' ? titleItems.value
@@ -240,6 +286,12 @@ function switchMineSubTab(v: ShopItemTypeValue) {
 // ── 购买 ──
 const buyModalOpen = ref(false)
 const buyItem = ref<ShopItem | null>(null)
+
+// ── 手机端分类侧边栏 ──
+const drawerOpen = ref(false)
+
+// 当前选中的分类信息（用于手机端指示器）
+const currentSubTab = computed(() => subTabs.value.find(t => t.value === subTab.value) || subTabs.value[0]!)
 
 function openBuy(item: ShopItem) {
   if (!isLoggedIn.value) {
