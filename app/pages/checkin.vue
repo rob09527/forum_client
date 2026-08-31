@@ -17,6 +17,7 @@
             <AppIcon name="calendar" :size="18" /> 每日签到
           </h1>
           <button
+            data-onboarding="checkin-button"
             class="px-4 py-1.5 text-sm rounded-md transition-colors inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
             :class="status.checkedToday
               ? 'bg-zinc-100 text-zinc-500 cursor-default'
@@ -30,7 +31,7 @@
           </button>
         </div>
 
-        <div class="grid grid-cols-3 gap-4">
+        <div class="grid grid-cols-3 gap-4" data-onboarding="checkin-streak">
           <div class="text-center p-3 rounded-lg bg-white/70 border border-zinc-200/60">
             <div class="text-2xl font-bold text-amber-600">{{ status.streak }}</div>
             <div class="text-xs text-zinc-500 mt-1">连续签到天数</div>
@@ -102,7 +103,7 @@
       </div>
 
       <!-- 规则说明 -->
-      <div class="panel p-6">
+      <div class="panel p-6" data-onboarding="checkin-rules">
         <h2 class="text-sm font-medium text-zinc-700 mb-3 inline-flex items-center gap-1.5">
           <AppIcon name="scroll" :size="14" /> 签到规则
         </h2>
@@ -140,6 +141,7 @@ const { isLoggedIn, openLogin, restoreSession } = useAuth()
 const { getStatus, checkin: submitCheckin } = useCheckin()
 const { makeup, makeupPrice } = useMakeup()
 const toast = useToast()
+const { startFirstCheckinTour, isCompleted } = useOnboarding()
 
 const weekdays = ['一', '二', '三', '四', '五', '六', '日']
 
@@ -302,4 +304,14 @@ watch(isLoggedIn, (v) => {
 if (import.meta.client) {
   loadMonth(viewMonth.value)
 }
+
+// 首次访问签到页引导
+onMounted(() => {
+  if (isLoggedIn.value && !isCompleted('first-checkin')) {
+    // 延迟确保页面已完全渲染
+    setTimeout(() => {
+      startFirstCheckinTour()
+    }, 800)
+  }
+})
 </script>

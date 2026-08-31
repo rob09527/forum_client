@@ -4,7 +4,7 @@
 
     <div class="space-y-5">
       <!-- 标题 -->
-      <div>
+      <div data-onboarding="post-title">
         <label class="block text-sm text-zinc-600 mb-1.5">标题</label>
         <input
           v-model="title"
@@ -18,7 +18,7 @@
 
       <!-- 板块 + 标签 -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div>
+        <div data-onboarding="post-category">
           <label class="block text-sm text-zinc-600 mb-1.5">板块</label>
           <select
             v-model="category"
@@ -33,7 +33,7 @@
         </div>
 
         <!-- 标签（系统自动推荐，点击添加） -->
-        <div>
+        <div data-onboarding="post-tags">
           <label class="block text-sm text-zinc-600 mb-1.5">标签（最多 5 个，点击推荐添加）</label>
           <div class="flex flex-wrap items-center gap-1.5 bg-white border border-zinc-200 rounded-md px-2 py-1.5 min-h-[2.4rem]">
             <span
@@ -95,14 +95,16 @@
       </div>
 
       <!-- 正文（完整 Markdown 编辑器：工具栏 + 图片上传 + 表情；hover 按钮可看用法，右上角可预览） -->
-      <div>
+      <div data-onboarding="post-editor">
         <label class="block text-sm text-zinc-600 mb-1.5">正文</label>
+        <div data-onboarding="editor-toolbar">
         <MarkdownEditor
           v-model="content"
           toolbar="full"
           :height="440"
           placeholder="用 Markdown 撰写正文：支持加粗、列表、图片、表情等。鼠标悬停工具栏按钮可查看用法，右上角可预览排版"
         />
+        </div>
         <p class="text-xs mt-1 text-right" :class="content.trim().length < 10 ? 'text-amber-600/90' : 'text-zinc-600'">
           {{ content.length }} 字符<span v-if="content.trim().length < 10"> · 至少 10 字</span>
         </p>
@@ -120,6 +122,7 @@
       <div class="flex items-center gap-3 pt-1">
         <button
           type="button"
+          data-onboarding="post-submit"
           class="btn btn-primary px-5 py-2 text-sm"
           :disabled="submitting"
           @click="submit"

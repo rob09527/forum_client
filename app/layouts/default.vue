@@ -84,10 +84,11 @@ const route = useRoute()
 const router = useRouter()
 
 const { categories } = useCategories()
-const { restoreSession } = useAuth()
+const { restoreSession, isLoggedIn } = useAuth()
 const { getHotPosts } = usePosts()
 const { getLatestUsers } = useUserProfile()
 const { getAnnouncements } = useAnnouncements()
+const { startWelcomeTour, isCompleted } = useOnboarding()
 
 // 当前板块由 URL 驱动：/?category=llm；无参默认全部（general）
 // 这样任何页面点板块都会先跳回首页列表，且支持分享链接、浏览器前进后退。
@@ -157,6 +158,29 @@ onMounted(() => {
 if (import.meta.client) {
   restoreSession()
 }
+
+// 监听登录状态变化，触发首次登录引导
+watch(isLoggedIn, (loggedIn) => {
+  if (loggedIn && import.meta.client) {
+    // 延迟执行，确保 DOM 已完全渲染且引导标记元素已挂载
+    nextTick(() => {
+      setTimeout(() => {
+        if (!isCompleted('welcome')) {
+          startWelcomeTour()
+        }
+      }, 500)
+    })
+  }
+})
+
+// 如果页面加载时已登录，也检查是否需要引导
+onMounted(() => {
+  if (isLoggedIn.value && !isCompleted('welcome')) {
+    setTimeout(() => {
+      startWelcomeTour()
+    }, 1000)
+  }
+})
 
 /** 点击板块：拼 URL 跳回首页（general=全部，移除 category 参数） */
 function handleSelectCategory(slug: string) {

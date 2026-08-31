@@ -9,6 +9,7 @@ import type { PostDetail } from '~/types'
 
 const router = useRouter()
 const toast = useToast()
+const { startFirstPostTour, isCompleted } = useOnboarding()
 
 /** 发布成功 → 跳转到帖子详情页 */
 function onSuccess(post: PostDetail) {
@@ -25,4 +26,14 @@ if (import.meta.client) {
     }
   })
 }
+
+// 首次发帖引导
+onMounted(() => {
+  if (isLoggedIn.value && !isCompleted('first-post')) {
+    // 延迟确保表单已完全渲染
+    setTimeout(() => {
+      startFirstPostTour()
+    }, 800)
+  }
+})
 </script>
