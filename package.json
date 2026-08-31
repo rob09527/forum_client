@@ -16,6 +16,7 @@
     "@nuxt/ui": "^4.9.0",
     "@vueuse/core": "^13.0.0",
     "@vueuse/nuxt": "^13.0.0",
+    "driver.js": "^1.8.0",
     "isomorphic-dompurify": "^3.22.0",
     "marked": "^18.0.9",
     "md-editor-v3": "^6.5.6",
