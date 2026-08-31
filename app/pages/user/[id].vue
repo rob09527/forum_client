@@ -110,12 +110,13 @@
 
         <!-- 等级进度条 -->
         <div class="mt-5 pt-4 border-t border-zinc-200">
-          <div class="flex items-center justify-between text-xs text-zinc-500 mb-2">
-            <span>等级进度 <span class="text-zinc-700">{{ levelLabel }}</span></span>
-            <span v-if="profile.levelProgress.nextLevelAt !== null">
-              还差 <span class="text-amber-600 font-medium">{{ profile.levelProgress.remaining }}</span> 鸡腿升 {{ nextLevelLabel }}
+          <!-- 窄屏两段文案可能挤：gap-2 + 右侧 text-right，长文案折行也不与左侧重叠 -->
+          <div class="flex items-center justify-between gap-2 text-xs text-zinc-500 mb-2">
+            <span class="shrink-0">等级进度 <span class="text-zinc-700">{{ levelLabel }}</span></span>
+            <span v-if="profile.levelProgress.nextLevelAt !== null" class="text-right">
+              还差 <span class="text-amber-600 font-medium tabular-nums">{{ profile.levelProgress.remaining }}</span> 鸡腿升至「{{ nextLevelLabel }}」
             </span>
-            <span v-else class="text-emerald-600">已满级</span>
+            <span v-else class="text-emerald-600 shrink-0">已满级</span>
           </div>
           <div class="h-2 rounded-full bg-white overflow-hidden">
             <div

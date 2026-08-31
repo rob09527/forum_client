@@ -83,7 +83,7 @@
                 <!-- 补签入口 [1.4.2]：当前月「昨天」未签时显示，一步完成（消耗 makeupPrice🍗） -->
                 <button
                   v-if="cell.isYesterday && !cell.checked"
-                  class="text-[11px] px-2 py-0.5 rounded-md bg-amber-500/25 text-amber-800 font-medium hover:bg-amber-500/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40"
+                  class="text-[10px] leading-none px-1.5 py-0.5 rounded-md bg-amber-500/25 text-amber-800 font-medium hover:bg-amber-500/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40"
                   @click="showMakeupConfirm = true"
                 >
                   补签

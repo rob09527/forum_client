@@ -66,7 +66,8 @@
       <!-- 悬赏问答 [1.6.4][3.5]：发布时托管扣款 → 采纳后发给回答者 → 超时自动判给最高赞。
            仅发帖可设（编辑不可改，避免改动既有悬赏帖金额破坏账务一致性） -->
       <div v-if="!isEdit" class="bg-amber-500/5 border border-amber-500/20 rounded-md px-4 py-3">
-        <label class="flex items-center gap-2 cursor-pointer select-none">
+        <!-- 窄屏(≤~350px)三元素放不下时会换行：flex-wrap 让描述文字折行不溢出/不错位 -->
+        <label class="flex items-center gap-x-2 gap-y-1 flex-wrap cursor-pointer select-none">
           <input v-model="bountyEnabled" type="checkbox" class="accent-amber-500 w-4 h-4" />
           <span class="text-sm text-zinc-700">设为悬赏帖</span>
           <span class="text-xs text-zinc-500">让优质回答赢走你的鸡腿</span>

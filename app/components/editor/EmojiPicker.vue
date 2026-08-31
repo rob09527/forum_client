@@ -126,7 +126,7 @@ const visibleGroups = computed(() => {
         <!-- 搜索态:扁平结果 -->
         <template v-if="query">
           <p v-if="searchResults.length === 0" class="text-xs text-zinc-400 px-1 py-3 text-center">没有找到匹配的表情</p>
-          <div v-else class="grid grid-cols-8 gap-0.5">
+          <div v-else class="grid grid-cols-4 sm:grid-cols-8 gap-0.5">
             <button
               v-for="r in searchResults"
               :key="r.e"
@@ -143,7 +143,7 @@ const visibleGroups = computed(() => {
         <template v-else>
           <div v-if="recent.length > 0" class="mb-2">
             <p class="text-[11px] text-zinc-400 px-1 mb-1">最近使用</p>
-            <div class="grid grid-cols-8 gap-0.5">
+            <div class="grid grid-cols-4 sm:grid-cols-8 gap-0.5">
               <button
                 v-for="e in recent"
                 :key="e"
@@ -157,7 +157,7 @@ const visibleGroups = computed(() => {
           </div>
           <div v-for="g in visibleGroups" :key="g.name" class="mb-2">
             <p class="text-[11px] text-zinc-400 px-1 mb-1">{{ g.name }}</p>
-            <div class="grid grid-cols-8 gap-0.5">
+            <div class="grid grid-cols-4 sm:grid-cols-8 gap-0.5">
               <button
                 v-for="e in g.emojis"
                 :key="e"
@@ -175,7 +175,7 @@ const visibleGroups = computed(() => {
 
     <!-- 表情包列表 -->
     <div v-else class="max-h-56 overflow-y-auto p-2">
-      <div class="grid grid-cols-6 gap-1">
+      <div class="grid grid-cols-3 sm:grid-cols-6 gap-1">
         <button
           v-for="s in stickers"
           :key="s.file"

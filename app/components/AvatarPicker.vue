@@ -6,7 +6,7 @@
     </p>
 
     <!-- 风格分类：点击展开该风格的 20 个头像 -->
-    <div class="grid grid-cols-5 gap-2 mb-4">
+    <div class="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
       <button
         v-for="s in styles"
         :key="s.id"
@@ -24,7 +24,7 @@
     </div>
 
     <!-- 当前风格的 20 个头像：免费可点选，付费 🔒 角标 + 价格、点击去商城 -->
-    <div v-if="expandedStyle" class="grid grid-cols-8 gap-1.5 max-h-[320px] overflow-y-auto">
+    <div v-if="expandedStyle" class="grid grid-cols-4 sm:grid-cols-8 gap-1.5 max-h-[320px] overflow-y-auto">
       <button
         v-for="n in perStyle"
         :key="n"

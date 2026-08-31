@@ -17,16 +17,19 @@
       </div>
     </div>
 
-    <!-- 价格 + 时效（付费租用） -->
+    <!-- 价格 + 时效（付费租用）；inline-flex + gap 让 🍗 与数字间留固定间距（移动端 44px 触控目标基线） -->
     <div class="flex items-center justify-between mt-3 text-sm">
-      <span class="font-medium text-amber-600">🍗 {{ item.price }}</span>
+      <span class="font-medium text-amber-600 inline-flex items-center gap-1">
+        <span aria-hidden="true" class="text-[13px] leading-none">🍗</span>{{ item.price }}
+      </span>
       <span class="text-xs text-zinc-500">{{ item.durationDays }} 天</span>
     </div>
 
-    <!-- 操作：付费商品走购买租用（flex-1 撑底，保证同网格行内按钮垂直对齐不漂移） -->
+    <!-- 操作：付费商品走购买租用（flex-1 撑底，保证同网格行内按钮垂直对齐不漂移）。
+         min-h-11(44px) 保证手机端触控区达标（原先 py-1.5 仅约 33px，低于 44px 目标） -->
     <div class="flex-1" />
     <button
-      class="btn btn-primary mt-3 w-full py-1.5 text-sm"
+      class="btn btn-primary mt-3 w-full py-1.5 text-sm min-h-11 flex items-center justify-center"
       @click="emit('buy')"
     >
       购买

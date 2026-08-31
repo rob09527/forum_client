@@ -98,7 +98,7 @@
     </div>
 
     <!-- 楼中楼回复列表（递归渲染） -->
-    <div v-if="replies.length" class="ml-12 mt-2 pl-4 border-l border-zinc-200 space-y-2">
+    <div v-if="replies.length" class="ml-6 sm:ml-12 mt-2 pl-4 border-l border-zinc-200 space-y-2">
       <CommentItem
         v-for="r in replies"
         :key="r.id"

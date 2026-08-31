@@ -78,7 +78,7 @@ function onSelect(color: string) {
     <!-- 色板 -->
     <div v-if="show" class="fixed z-[9001]" :style="pos" @click.stop>
       <div class="bg-white rounded-lg shadow-lg border border-zinc-200 p-2">
-        <div class="grid grid-cols-6 gap-1.5">
+        <div class="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
           <button
             v-for="c in PRESET_COLORS"
             :key="c.value"

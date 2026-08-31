@@ -10,7 +10,7 @@
         <button
           v-for="t in tabs"
           :key="t.value"
-          class="px-3.5 py-1.5 text-sm rounded-md transition-colors inline-flex items-center gap-1.5"
+          class="px-3.5 py-2 text-sm rounded-md transition-colors inline-flex items-center gap-1.5"
           :class="activeTab === t.value ? 'bg-zinc-200 text-zinc-800 font-medium' : 'text-zinc-600 hover:text-zinc-900'"
           @click="switchTab(t.value)"
         >
@@ -33,7 +33,7 @@
           <button
             v-for="st in subTabs"
             :key="st.value"
-            class="px-3 py-1.5 text-sm rounded-lg transition-colors inline-flex items-center gap-1"
+            class="px-3 py-2 text-sm rounded-lg transition-colors inline-flex items-center gap-1"
             :class="subTab === st.value ? 'bg-blue-500 text-white' : 'text-zinc-600 hover:text-zinc-900'"
             @click="switchSubTab(st.value)"
           >
@@ -99,7 +99,7 @@
           <button
             v-for="mt in mineSubTabs"
             :key="mt.value"
-            class="px-3 py-1.5 text-sm rounded-lg transition-colors inline-flex items-center gap-1"
+            class="px-3 py-2 text-sm rounded-lg transition-colors inline-flex items-center gap-1"
             :class="mineSubTab === mt.value ? 'bg-blue-500 text-white' : 'text-zinc-600 hover:text-zinc-900'"
             @click="switchMineSubTab(mt.value)"
           >
