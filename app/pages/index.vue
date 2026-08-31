@@ -1,41 +1,11 @@
 <template>
   <div class="space-y-4">
-    <!-- 移动端分类横向滚动 Tabs（仅移动端显示） -->
-    <ClientOnly>
-      <div class="lg:hidden overflow-x-auto -mx-4 px-4 scrollbar-hide">
-        <div class="flex items-center gap-2 min-w-max pb-2">
-          <button
-            v-for="cat in categories"
-            :key="cat.slug"
-            :class="[
-              'flex items-center gap-1.5 px-3 h-8 text-sm rounded-full transition-all whitespace-nowrap shrink-0',
-              activeCategory === cat.slug
-                ? 'bg-blue-500 text-white shadow-sm'
-                : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 active:scale-95'
-            ]"
-            @click="handleCategoryChange(cat.slug)"
-          >
-            <CategoryIcon :name="cat.icon" class="w-4 h-4" />
-            <span>{{ cat.name }}</span>
-          </button>
-        </div>
-      </div>
-    </ClientOnly>
-
     <!-- 首页小 tips 轮播：替代固定品牌标语，克制不占位，每 6s 换一条（§7.14） -->
-    <ClientOnly>
-      <div class="flex items-center gap-1.5 px-1 min-h-5">
-        <span class="text-zinc-400 leading-none" aria-hidden="true"><AppIcon name="sparkles" :size="12" /></span>
-        <Transition name="tip" mode="out-in">
-          <span :key="tipIndex" class="text-[13px] text-zinc-500 leading-5">{{ HOME_TIPS[tipIndex % HOME_TIPS.length] }}</span>
-        </Transition>
-      </div>
-    </ClientOnly>
+    <TipsBanner />
 
-    <!-- 标签行（由导航栏第二行移出，克制为朴素文字链接；筛选同样走 URL ?tag=）
-         随机抽取仅客户端计算，ClientOnly 避免 SSR/CSR hydration 不一致 -->
+    <!-- 标签行：仅PC端显示 -->
     <ClientOnly>
-      <div class="flex items-center gap-1 flex-wrap px-1">
+      <div class="hidden lg:flex items-center gap-1 flex-wrap px-1">
         <span class="text-xs text-zinc-400 mr-1 whitespace-nowrap">标签</span>
         <button
           v-for="tag in headerTags"
@@ -69,7 +39,6 @@
 <script setup lang="ts">
 import { usePosts } from '~/composables/usePosts'
 import { useCategories } from '~/composables/useCategories'
-import { HOME_TIPS } from '~/constants/tips'
 
 const route = useRoute()
 const router = useRouter()
@@ -98,24 +67,7 @@ function shuffleTags() {
 }
 onMounted(() => {
   if (headerTags.value.length === 0) shuffleTags()
-  startTipTicker()
 })
-
-// ── 首页小 tips 轮播：每 6s 切到下一条（ClientOnly 渲染，无水合问题）──
-const TIP_INTERVAL_MS = 6000
-const tipIndex = ref(0)
-let tipTimer: ReturnType<typeof setInterval> | undefined
-function startTipTicker() {
-  stopTipTicker()
-  tipTimer = setInterval(() => {
-    tipIndex.value = (tipIndex.value + 1) % HOME_TIPS.length
-  }, TIP_INTERVAL_MS)
-}
-function stopTipTicker() {
-  if (tipTimer) clearInterval(tipTimer)
-  tipTimer = undefined
-}
-onBeforeUnmount(stopTipTicker)
 
 function toggleTag(name: string) {
   // 继承 URL 中的 category，只改 tag，避免丢板块参数；不做类型强转（query 值本身可为 string|string[]）
@@ -191,20 +143,6 @@ const errorMessage = computed(() => dataError.value ? '加载帖子失败' : lis
 </script>
 
 <style scoped>
-/* 小 tips 轮播的淡入淡出切换动画：旧条淡出上移，新条淡入上移进入 */
-.tip-enter-active,
-.tip-leave-active {
-  transition: opacity 0.35s ease, transform 0.35s ease;
-}
-.tip-enter-from {
-  opacity: 0;
-  transform: translateY(6px);
-}
-.tip-leave-to {
-  opacity: 0;
-  transform: translateY(-6px);
-}
-
 /* 隐藏横向滚动条（保持滚动功能） */
 .scrollbar-hide {
   -ms-overflow-style: none;

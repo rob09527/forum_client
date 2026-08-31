@@ -49,6 +49,12 @@
           </div>
         </div>
 
+        <div v-if="currentInlineAd" class="overflow-hidden rounded-lg">
+          <Transition name="announce" mode="out-in">
+            <AdSlot :key="currentInlineAd.id" :ad="currentInlineAd" />
+          </Transition>
+        </div>
+
         <slot />
       </main>
 
@@ -79,6 +85,7 @@
 import { ANNOUNCEMENT_DOT_COLOR } from '~/types'
 import type { Announcement, NewUser } from '~/types'
 import { useAnnouncements } from '~/composables/useAnnouncements'
+import { useAdverts } from '~/composables/useAdverts'
 
 const route = useRoute()
 const router = useRouter()
@@ -87,6 +94,7 @@ const { categories } = useCategories()
 const { restoreSession, isLoggedIn } = useAuth()
 const { getHotPosts } = usePosts()
 const { getLatestUsers } = useUserProfile()
+const { adverts } = useAdverts()
 const { getAnnouncements } = useAnnouncements()
 const { startWelcomeTour, isCompleted } = useOnboarding()
 
@@ -105,6 +113,10 @@ const { data: announcements } = useAsyncData<Announcement[]>(
 const currentIndex = ref(0)
 const currentAnnouncement = computed(() => announcements.value[currentIndex.value] ?? null)
 
+const inlineAdverts = computed(() => adverts.value.filter((a) => a.position === 'inline'))
+const currentAdIndex = ref(0)
+const currentInlineAd = computed(() => inlineAdverts.value[currentAdIndex.value] ?? null)
+
 /**
  * 外链补全协议：无协议的域名（如 www.baidu.com）自动加 https://。
  * 否则 <a href="www.baidu.com"> 会被浏览器当相对路径，拼成 http://localhost:3000/www.baidu.com。
@@ -114,8 +126,15 @@ function externalHref(link: string): string {
   if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith('//')) return trimmed
   return `https://${trimmed}`
 }
+/** 公告轮播间隔（毫秒） */
 const ANNOUNCE_INTERVAL_MS = 4000
+/** 广告轮播间隔（毫秒） */
+const AD_INTERVAL_MS = 5000
+
+/** 公告轮播定时器（普通变量，不需要响应式） */
 let announceTimer: ReturnType<typeof setInterval> | undefined
+/** 广告轮播定时器（普通变量，不需要响应式） */
+let adTimer: ReturnType<typeof setInterval> | undefined
 function startAnnounceTicker() {
   stopAnnounceTicker()
   if (announcements.value.length <= 1) return
@@ -127,8 +146,27 @@ function stopAnnounceTicker() {
   if (announceTimer) clearInterval(announceTimer)
   announceTimer = undefined
 }
-onMounted(startAnnounceTicker)
-onBeforeUnmount(stopAnnounceTicker)
+
+function startAdTicker() {
+  stopAdTicker()
+  if (inlineAdverts.value.length <= 1) return
+  adTimer = setInterval(() => {
+    currentAdIndex.value = (currentAdIndex.value + 1) % inlineAdverts.value.length
+  }, AD_INTERVAL_MS)
+}
+
+function stopAdTicker() {
+  if (adTimer) clearInterval(adTimer)
+  adTimer = undefined
+}
+onMounted(() => {
+  startAnnounceTicker()
+  startAdTicker()
+})
+onBeforeUnmount(() => {
+  stopAnnounceTicker()
+  stopAdTicker()
+})
 // 公告数据就绪 / 条数变化时，重置到第一条并重启轮播
 watch(
   () => announcements.value.length,
@@ -153,6 +191,14 @@ onMounted(() => {
     .then((users) => { newUsers.value = users })
     .catch(() => {})
 })
+
+watch(
+  () => inlineAdverts.value.length,
+  () => {
+    currentAdIndex.value = 0
+    startAdTicker()
+  }
+)
 
 // 应用启动时恢复登录状态
 if (import.meta.client) {
