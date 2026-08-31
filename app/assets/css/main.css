@@ -13,10 +13,26 @@
 }
 
 @layer base {
+  /* 画布兜底色：html 底色垫底，body::before 背景层即使 z-index:-1 也不会露白 */
+  html {
+    background-color: #fafbfd;
+  }
   body {
     @apply antialiased text-zinc-700 font-sans;
-    /* 视觉方向 A「冷白蜂巢」：冷灰白底 + 顶部淡蓝光晕 + 蜂巢花案平铺。
-       不暖不深、克制的 AI 产品感；花案 SVG 见 public/images/pattern-honeycomb.svg（§7.12） */
+  }
+  /* 全景背景固定层（视觉方向 A「冷白蜂巢」：冷灰白底 + 顶部淡蓝光晕 + 蜂巢花案平铺；
+     花案 SVG 见 public/images/pattern-honeycomb.svg）。
+     为什么用 position:fixed 伪元素而不是 body 上的 background-attachment:fixed：
+     ① iOS 不支持 background-attachment:fixed（会被当 scroll）；fixed 定位元素全平台可靠；
+     ② 背景锚定在文档顶部，切栏目时内容高度骤变（如空栏目）→ scrollTop 被浏览器钳制，
+        背景会整体「跳」回顶部。钉在视口上就永远静止，与路由/滚动无关。
+     z-index:-1 垫在内容之下（html 已设底色兜底）；pointer-events:none 不挡交互。 */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
     background-color: #fafbfd;
     background-image:
       radial-gradient(circle at 38% 0%, rgba(96, 165, 250, 0.07), transparent 55%),
@@ -24,15 +40,6 @@
     background-size: auto, 180px 180px;
     background-repeat: no-repeat, repeat;
     background-position: center top, center;
-    /* 移动端两层均随内容滚动（iOS 不支持 background-attachment: fixed） */
-    background-attachment: scroll, scroll;
-  }
-}
-
-/* 桌面端（≥1024px）：背景光晕固定不随内容滚动，营造深度（花案仍随滚动） */
-@media (min-width: 1024px) {
-  body {
-    background-attachment: fixed, scroll;
   }
 }
 
