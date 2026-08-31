@@ -14,6 +14,16 @@
         <div
           class="relative bg-white border border-zinc-200 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden auth-decor"
         >
+          <!-- 关闭按钮（整改：max-w-md + mx-4 在 390px 屏几乎占满宽度，点遮罩边缘很难触发 @click.self，必须有显式关闭渠道） -->
+          <button
+            type="button"
+            class="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-white/80 hover:bg-white text-zinc-500 hover:text-zinc-800 flex items-center justify-center shadow-sm transition-colors"
+            aria-label="关闭登录"
+            @click="closeModal"
+          >
+            <AppIcon name="x" :size="16" />
+          </button>
+
           <!-- Logo -->
           <div class="text-center pt-8 pb-2">
             <span class="text-2xl font-bold text-blue-600 tracking-tight">AI Base</span>

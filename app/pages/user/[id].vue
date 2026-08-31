@@ -128,6 +128,15 @@
             等级由「累计获得鸡腿」决定，消费不降级 [R20]
           </p>
         </div>
+
+        <!-- 退出登录（仅本人视角；整改：TG 登录用户此前无注销渠道，桌面端只有侧栏/顶栏小头像下拉，手机端「我的」是唯一明显入口，这里给本人统一挂一个） -->
+        <button
+          v-if="isOwnProfile"
+          class="mt-4 w-full py-2.5 text-sm rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition-colors inline-flex items-center justify-center gap-2"
+          @click="handleLogout"
+        >
+          <AppIcon name="log-out" :size="14" /> 退出登录
+        </button>
       </div>
 
       <!-- 头像选择弹窗（统一弹窗封装） -->
@@ -221,7 +230,7 @@ import { useGameConfig } from '~/composables/useGameConfig'
 
 const route = useRoute()
 const toast = useToast()
-const { user, isLoggedIn, openLogin, updateUser } = useAuth()
+const { user, isLoggedIn, openLogin, updateUser, logout } = useAuth()
 
 const userId = Number(route.params.id)
 // 非法/越界 id 直接视为不存在，避免向 /api/users/NaN 发无效请求
@@ -326,6 +335,15 @@ async function doRename() {
 
 /** 当前用户是否在查看自己的资料 */
 const isOwnProfile = computed(() => isLoggedIn.value && user.value?.id === userId)
+
+// ── 退出登录（本人视角按钮触发；注销后回首页，避免停在被注销用户的资料页） ──
+async function handleLogout() {
+  try {
+    await logout()
+  } finally {
+    await navigateTo('/')
+  }
+}
 
 // ── 关注（后端 profile 返回 isFollowing 作初始值，切换后本地维护 + 同步计数） ──
 const following = ref(false)
