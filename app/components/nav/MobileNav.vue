@@ -33,8 +33,22 @@
         </span>
       </NuxtLink>
 
-      <NuxtLink to="/messages" class="nav-tab justify-center" :class="navClass('/messages')">
-        <AppIcon name="message-square" :size="20" />
+      <NuxtLink
+        to="/messages"
+        class="nav-tab justify-center"
+        :class="navClass('/messages')"
+        aria-label="消息（私信）"
+      >
+        <span class="relative">
+          <AppIcon name="message-square" :size="20" />
+          <!-- 私信未读红点：与顶栏信封共用 useMessages().unread 全局单例（SSE 实时推送同一份数据） -->
+          <span
+            v-if="dmUnread > 0"
+            class="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-medium flex items-center justify-center"
+          >
+            {{ dmUnread > 99 ? '99+' : dmUnread }}
+          </span>
+        </span>
         <span>消息</span>
       </NuxtLink>
 
@@ -49,6 +63,9 @@
 <script setup lang="ts">
 const route = useRoute()
 const { user, openLogin } = useAuth()
+// 私信未读总数：与 AppHeader 顶栏信封共用同一 useState('dm-unread') 单例，
+// 初始拉取与 SSE 订阅由 AppHeader onMounted 统一负责，这里只读不写。
+const { unread: dmUnread } = useMessages()
 
 /** 判断当前路由是否命中某个 tab（「/」精确匹配首页，「/me」聚合个人域下若干页面） */
 function isActive(prefix: string): boolean {
