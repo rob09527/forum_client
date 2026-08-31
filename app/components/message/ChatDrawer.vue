@@ -3,7 +3,8 @@
     <Transition name="chat-drawer">
       <div
         v-if="drawerOpen"
-        class="fixed bottom-4 right-4 z-[90] w-[360px] h-[520px] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] bg-white border border-zinc-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+        class="fixed bottom-4 right-4 z-[90] w-[360px] h-[520px] lg:max-w-[calc(100vw-2rem)] lg:max-h-[calc(100vh-2rem)] bg-white border border-zinc-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden
+               max-lg:inset-0 max-lg:w-full max-lg:h-full max-lg:rounded-none max-lg:border-0 max-lg:bottom-0 max-lg:right-0"
       >
         <template v-if="activeConversationId !== null && otherUser">
           <!-- 头部：对方用户名 + 打开私信页 + 关闭 -->
@@ -14,8 +15,9 @@
               to="/messages"
               class="p-1.5 rounded-md text-zinc-500 hover:bg-zinc-200 hover:text-zinc-700 transition-colors"
               title="打开私信页"
+              @click="closeDrawer"
             >
-              <AppIcon name="mail" :size="16" />
+              <AppIcon name="external-link" :size="16" />
             </NuxtLink>
             <button
               class="p-1.5 rounded-md text-zinc-500 hover:bg-zinc-200 hover:text-zinc-700 transition-colors"
