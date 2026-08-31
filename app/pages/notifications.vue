@@ -30,8 +30,39 @@
 
         <!-- 列表 -->
         <div v-if="loading && items.length === 0" class="px-6 py-12 text-center text-sm text-zinc-500">加载中...</div>
-        <div v-else-if="items.length === 0" class="px-6 py-12 text-center">
-          <p class="text-sm text-zinc-500">还没有通知，去社区逛逛吧～</p>
+        <div v-else-if="items.length === 0" class="px-6 py-20 text-center">
+          <!-- 空状态插图 -->
+          <div class="flex justify-center mb-4">
+            <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <!-- 铃铛主体 -->
+              <path d="M60 20C51.7157 20 45 26.7157 45 35V50C45 58.2843 38.2843 65 30 65V70H90V65C81.7157 65 75 58.2843 75 50V35C75 26.7157 68.2843 20 60 20Z" fill="#E4E4E7" />
+              <!-- 铃铛顶部 -->
+              <circle cx="60" cy="20" r="4" fill="#A1A1AA" />
+              <!-- 铃铛底部 -->
+              <path d="M52 70C52 74.4183 55.5817 78 60 78C64.4183 78 68 74.4183 68 70H52Z" fill="#A1A1AA" />
+              <!-- 装饰线条 -->
+              <circle cx="60" cy="60" r="25" stroke="#F4F4F5" stroke-width="8" opacity="0.5" />
+              <circle cx="60" cy="60" r="35" stroke="#F4F4F5" stroke-width="6" opacity="0.3" />
+            </svg>
+          </div>
+          <!-- 引导文案 -->
+          <p class="text-base font-medium text-zinc-700 mb-2">暂时还没有通知</p>
+          <p class="text-sm text-zinc-500 mb-6 max-w-xs mx-auto">当有人点赞、评论、关注你或打赏你的内容时，你会在这里收到通知</p>
+          <!-- 引导按钮 -->
+          <div class="flex gap-3 justify-center">
+            <NuxtLink
+              to="/"
+              class="px-4 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+            >
+              去首页逛逛
+            </NuxtLink>
+            <NuxtLink
+              to="/post/new"
+              class="px-4 py-2 text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-lg transition-colors"
+            >
+              发布帖子
+            </NuxtLink>
+          </div>
         </div>
         <div v-else class="divide-y divide-zinc-200/50">
           <button

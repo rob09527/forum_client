@@ -3,8 +3,32 @@
     <div v-if="loading && conversations.length === 0" class="p-6 text-center text-sm text-zinc-400">
       加载中…
     </div>
-    <div v-else-if="conversations.length === 0" class="p-6 text-center text-sm text-zinc-500">
-      还没有私信会话
+    <div v-else-if="conversations.length === 0" class="p-8 text-center">
+      <!-- 空状态插图 -->
+      <div class="flex justify-center mb-4">
+        <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <!-- 信封底部 -->
+          <rect x="15" y="30" width="70" height="50" rx="4" fill="#E4E4E7" />
+          <!-- 信封盖子（三角形） -->
+          <path d="M15 30L50 55L85 30" fill="#F4F4F5" />
+          <path d="M15 30L50 55L85 30" stroke="#A1A1AA" stroke-width="2" stroke-linejoin="round" />
+          <!-- 信封边框 -->
+          <rect x="15" y="30" width="70" height="50" rx="4" stroke="#A1A1AA" stroke-width="2" fill="none" />
+          <!-- 装饰圆环 -->
+          <circle cx="50" cy="50" r="35" stroke="#F4F4F5" stroke-width="6" opacity="0.4" />
+        </svg>
+      </div>
+      <!-- 引导文案 -->
+      <p class="text-sm font-medium text-zinc-700 mb-1">还没有私信会话</p>
+      <p class="text-xs text-zinc-500 mb-4">访问其他用户的主页，点击"发私信"按钮开始聊天</p>
+      <!-- 引导按钮 -->
+      <NuxtLink
+        to="/"
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
+      >
+        <AppIcon name="home" :size="12" />
+        去首页逛逛
+      </NuxtLink>
     </div>
     <button
       v-for="c in conversations"
