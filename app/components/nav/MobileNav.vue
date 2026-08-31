@@ -2,9 +2,10 @@
   <!-- 移动端底部 tab 导航（lg:hidden，仅 <1024px 显示）。
        5 槽：首页 / 商店 / [发帖 ➕] / 消息 / 我的；发帖为居中圆钮（论坛第一优先级动作），只显 ➕ 不显文字。
        消息=私信(/messages)：顶栏铃铛(通知)手机端已常驻，私信没有固定入口，故「消息」tab 指私信。
-       pb 适配 iOS Home 条安全区；固定底栏，主内容区由 default.vue 加对应底部内边距避让。 -->
+       pb 适配 iOS Home 条安全区；固定底栏，主内容区由 default.vue 加对应底部内边距避让。
+       不加 backdrop-blur：固定整宽栏滚动时对背后内容逐帧重算模糊，bg-white/95 下几乎不可见，纯耗电/掉帧。 -->
   <nav
-    class="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-xl border-t border-zinc-200 pb-[env(safe-area-inset-bottom)]"
+    class="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 border-t border-zinc-200 pb-[env(safe-area-inset-bottom)]"
     aria-label="移动端主导航"
   >
     <div class="grid grid-cols-5 items-stretch h-14">
