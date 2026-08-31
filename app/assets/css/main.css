@@ -222,7 +222,13 @@
 .md-editor-preview pre code { @apply bg-transparent text-zinc-800 p-0 rounded-none; }
 .md-editor-preview img { @apply max-w-full rounded-md my-3; }
 .md-editor-preview hr { @apply border-zinc-200 my-5; }
-.md-editor-preview table { @apply w-full my-3 text-sm border-collapse; }
+.md-editor-preview table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  @apply my-3 text-sm border-collapse;
+}
 .md-editor-preview th,
 .md-editor-preview td { @apply border border-zinc-200 px-3 py-1.5 text-left; }
 .md-editor-preview th { @apply bg-zinc-50 text-zinc-900 font-medium; }
@@ -242,7 +248,19 @@
 
 .markdown-body hr { @apply border-zinc-200 my-5; }
 
-.markdown-body table { @apply w-full my-3 text-sm border-collapse; }
+/* 表格防整页溢出(GitHub 同款方案):
+   表格列会按单元格内容固有宽度撑开,不可断行长内容(长 URL/无空格内联代码)能把表格撑到
+   上千 px。若表格仍是普通 block 子元素,整页 docW 被撑破 → 手机出现横向滚动,用户只能
+   手动捏合缩放看全。改成「表格自身是滚动容器」:width:max-content 让列宽自然撑开,
+   max-width:100% 把可见宽度钳在容器内,overflow-x:auto 在表格内横向滚动。
+   display:block 让 overflow 生效(table 的默认 display 不参与块级滚动)。 */
+.markdown-body table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  @apply my-3 text-sm border-collapse;
+}
 .markdown-body th,
 .markdown-body td { @apply border border-zinc-200 px-3 py-1.5 text-left; }
 .markdown-body th { @apply bg-zinc-50 text-zinc-900 font-medium; }
