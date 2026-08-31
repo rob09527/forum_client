@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useId, h, type VNode } from 'vue'
+import { useMediaQuery } from '@vueuse/core'
 import { MdEditor, type ToolbarNames, type ExposeParam } from 'md-editor-v3'
 import type { CompletionSource } from '@codemirror/autocomplete'
 import DOMPurify from 'isomorphic-dompurify'
@@ -70,15 +71,34 @@ const TOOLBARS_COMPACT: ToolbarNames[] = [
   'image', 0,
 ]
 
-const toolbarList = computed<ToolbarNames[]>(() =>
-  props.toolbar === 'compact' ? TOOLBARS_COMPACT : TOOLBARS_FULL
-)
+// 移动端(<1024px)发帖工具栏:在 TOOLBARS_FULL 基础上砍掉低频项(代码块/代码/全屏),
+// 配合 main.css 里移动端隐藏按钮名(图标-only),让一栏装下不横向溢出;
+// 预览保留(发帖常用刚需),自定义按钮 0/1/2(表情/颜色/更多)照旧。
+const TOOLBARS_MOBILE: ToolbarNames[] = [
+  'bold', 'italic', '-',
+  'quote', 'unorderedList', 'orderedList', '-',
+  'link', 'image', 0, 1, 2, 'preview',
+]
+
+// 移动端用紧凑工具栏;评论的 compact 本身已够小,不受影响。
+const isMobile = useMediaQuery('(max-width: 1023px)')
+const toolbarList = computed<ToolbarNames[]>(() => {
+  if (props.toolbar === 'compact') return TOOLBARS_COMPACT
+  return isMobile.value ? TOOLBARS_MOBILE : TOOLBARS_FULL
+})
 
 // 自定义工具栏组件(defToolbars 数组形式,toolbars 里的数字 n 渲染 defToolbars[n] 并注入 insert)
 // md-editor-v3 类型声明是 `string | VNode`(单数),但运行时按数组消费——库的类型 bug。
 // 这里保持真实类型 `VNode[]`,仅绑定处做一次窄 cast,避免 `any` 扩散到模板。
 const defToolbars: VNode[] = [h(EmojiToolbarButton), h(ColorToolbarButton), h(MoreToolbarButton)]
 const defToolbarsProp = computed(() => defToolbars as unknown as string)
+
+// 移动端编辑器高度收缩到桌面 65%(440→约 286px):发帖页表单较长,
+// 桌面 440 在手机上会把「发布」推到屏外太多,缩短编辑区减少滚动。
+// 仅对大编辑器(发帖 full)生效;评论区 compact(180)本身已小,移动端保持不缩,避免太矮。
+const editorHeight = computed(() =>
+  isMobile.value && props.height > 300 ? Math.round(props.height * 0.65) : props.height
+)
 
 // 向自定义工具栏按钮(更多下拉)提供 execCommand:低频功能直接复用 md-editor 内置命令
 // (MoreCommand 是 ToolDirective 的子集,直接传给 execCommand),不手写插入模板。
@@ -213,7 +233,7 @@ onBeforeUnmount(() => toolbarObserver?.disconnect())
     :show-toolbar-name="true"
     :sanitize="sanitizePreview"
     :placeholder="placeholder"
-    :style="{ height: `${height}px`, borderRadius: '0.5rem' }"
+    :style="{ height: `${editorHeight}px`, borderRadius: '0.5rem' }"
     class="rounded-md overflow-hidden"
     @on-upload-img="handleUploadImg"
   />

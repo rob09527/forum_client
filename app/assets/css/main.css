@@ -257,3 +257,24 @@
 .md-editor .md-editor-toolbar {
   gap: 2px;
 }
+
+/* ── 移动端隐藏 Nuxt DevTools 悬浮调试图标 ──
+   DevTools 的浮动按钮/面板挂在 shadow root 里（宿主为 <nuxt-devtools-frame>），
+   无法直接选中内部元素，只能隐藏宿主。DevTools 无「只隐藏 FAB」的模块选项。
+   仅 <1024px（手机）隐藏，桌面端（≥1024px）保留 devtools 不影响开发调试；
+   生产构建不加载 devtools，此选择器无匹配，无副作用。 */
+@media (max-width: 1023px) {
+  nuxt-devtools-frame {
+    display: none !important;
+  }
+}
+
+/* ── 移动端工具栏图标-only ──
+   showToolbarName 的按钮文字名在手机上撑宽(约 40~50px/钮)，一栏放不下会横向溢出、
+   把「预览」挤到视口外。隐藏名字(display:none)让内置按钮变图标-only(约 24px/钮)，
+   配合 MarkdownEditor 的 TOOLBARS_MOBILE 紧凑列表，一栏刚好装下；title 提示不受影响。 */
+@media (max-width: 1023px) {
+  .md-editor .md-editor-toolbar-item-name {
+    display: none;
+  }
+}
