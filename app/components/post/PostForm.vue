@@ -1,8 +1,8 @@
 <template>
-  <div class="panel p-6">
+  <div class="panel p-4 sm:p-6 pb-24 lg:pb-6">
     <h1 class="text-lg font-semibold text-zinc-900 mb-5">{{ isEdit ? '编辑帖子' : '发布新帖' }}</h1>
 
-    <div class="space-y-5">
+    <div class="space-y-4 sm:space-y-5">
       <!-- 标题 -->
       <div data-onboarding="post-title">
         <label class="block text-sm text-zinc-600 mb-1.5">标题</label>
@@ -101,7 +101,7 @@
         <MarkdownEditor
           v-model="content"
           toolbar="full"
-          :height="440"
+          :height="editorHeight"
           placeholder="用 Markdown 撰写正文：支持加粗、列表、图片、表情等。鼠标悬停工具栏按钮可查看用法，右上角可预览排版"
         />
         </div>
@@ -118,22 +118,28 @@
         <AppIcon name="alert-triangle" :size="14" class="shrink-0" /> {{ error }}
       </div>
 
-      <!-- 操作 -->
-      <div class="flex items-center gap-3 pt-1">
+      <!-- 操作按钮 - 移动端固定在底部，避让底部导航栏 -->
+      <div class="lg:flex lg:items-center lg:gap-3 lg:pt-1 fixed lg:static bottom-14 lg:bottom-0 left-0 right-0 bg-white border-t lg:border-t-0 border-zinc-200 p-4 lg:p-0 flex items-center gap-3 shadow-[0_-2px_8px_rgba(0,0,0,0.08)] lg:shadow-none z-30 lg:z-auto">
         <button
           type="button"
           data-onboarding="post-submit"
-          class="btn btn-primary px-5 py-2 text-sm"
+          class="flex-1 lg:flex-none btn btn-primary px-5 py-2.5 lg:py-2 text-sm font-medium"
           :disabled="submitting"
           @click="submit"
         >
           {{ submitting ? '提交中…' : (isEdit ? '保存修改' : '发布') }}
         </button>
-        <NuxtLink :to="isEdit && post ? `/post/${post.id}` : '/'" class="text-sm text-zinc-600 hover:text-zinc-900">
+        <NuxtLink
+          :to="isEdit && post ? `/post/${post.id}` : '/'"
+          class="flex-1 lg:flex-none text-center lg:text-left py-2.5 lg:py-0 text-sm text-zinc-600 hover:text-zinc-900 border lg:border-0 border-zinc-200 rounded-md lg:rounded-none"
+        >
           取消
         </NuxtLink>
       </div>
     </div>
+
+    <!-- 移动端底部占位，防止内容被固定按钮和底部导航遮挡 -->
+    <div class="h-32 lg:hidden"></div>
   </div>
 </template>
 
@@ -164,6 +170,35 @@ const { bountyConfig } = useGameConfig()
 const { balance } = usePoints()
 
 const isEdit = computed(() => !!props.post)
+
+// ── 响应式编辑器高度：手机端动态计算，确保内容可见 ──
+const editorHeight = ref(440)
+
+onMounted(() => {
+  updateEditorHeight()
+  window.addEventListener('resize', updateEditorHeight)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateEditorHeight)
+})
+
+function updateEditorHeight() {
+  if (typeof window === 'undefined') return
+
+  const isMobile = window.innerWidth < 1024 // lg 断点
+  if (isMobile) {
+    // 移动端：视口高度 - 预留空间
+    // 视口 - 顶栏(64) - 标题(40) - 表单字段(约300) - 固定底栏(72) - 缓冲(60)
+    const viewportHeight = window.innerHeight
+    const reservedSpace = 536
+    const calculatedHeight = Math.max(200, Math.min(350, viewportHeight - reservedSpace))
+    editorHeight.value = calculatedHeight
+  } else {
+    // 桌面端：保持原有高度
+    editorHeight.value = 440
+  }
+}
 
 // ── 表单状态 ──
 const title = ref(props.post?.title ?? '')

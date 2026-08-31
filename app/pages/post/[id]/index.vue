@@ -1,5 +1,8 @@
 <template>
   <div class="max-w-3xl mx-auto space-y-4">
+    <!-- tips 轮播 -->
+    <TipsBanner />
+
     <!-- 游客可直接阅读正文；点赞/收藏/评论/打赏在各自操作处引导登录 -->
     <!-- 加载中 -->
       <div v-if="pending" class="panel p-10 text-center text-sm text-zinc-500">
@@ -92,7 +95,7 @@
         </div>
 
         <!-- 正文（Markdown 渲染） -->
-        <div class="text-[15px] leading-7 text-zinc-700 markdown-body" v-html="renderMarkdown(post.content)"></div>
+        <div class="text-[15px] leading-7 text-zinc-700 markdown-body" v-html="renderedContent"></div>
 
         <!-- 打赏汇总 [1.5.3]：🍗 N 人打赏 · 共 X（正文下方） -->
         <PostTipSummary :post-id="post.id" :refresh-key="tipRefreshKey" />
@@ -263,6 +266,9 @@ watch(isLoggedIn, (v) => {
     refreshComments()
   }
 })
+
+// 缓存 markdown 渲染结果，避免点赞/收藏等操作触发组件更新时重新计算（性能优化）
+const renderedContent = computed(() => post.value ? renderMarkdown(post.value.content) : '')
 
 // ── 点赞状态（后端详情不返回"是否已赞"，本地维护，重复点赞时报错时校准） ──
 const likeCount = ref(0)

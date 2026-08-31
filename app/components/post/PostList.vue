@@ -1,27 +1,23 @@
 <template>
   <div>
-    <!-- 排序 + 分页（顶上） -->
-    <div class="flex items-center justify-between px-6 py-3 border-b border-zinc-200 bg-zinc-50">
-      <div class="flex items-center gap-1">
+    <!-- 排序按钮：横向排列，移除顶部分页 -->
+    <div class="flex items-center justify-between px-4 lg:px-6 py-3 border-b border-zinc-200 bg-zinc-50">
+      <div class="flex items-center gap-1.5">
         <button
           v-for="s in sortTabs"
           :key="s.value"
           :class="[
-            'px-3 py-1 text-xs rounded-md transition-colors',
+            'px-3 py-1.5 text-sm rounded-md transition-colors inline-flex items-center gap-1.5',
             sortBy === s.value
-              ? 'bg-zinc-200 text-zinc-800'
-              : 'text-zinc-600 hover:text-zinc-900'
+              ? 'bg-blue-500 text-white font-medium'
+              : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
           ]"
           @click="selectSort(s.value)"
         >
-          <span class="inline-flex items-center gap-1"><AppIcon v-if="s.icon" :name="s.icon" :size="12" /> {{ s.label }}</span>
+          <AppIcon v-if="s.icon" :name="s.icon" :size="13" />
+          <span>{{ s.label }}</span>
         </button>
       </div>
-      <Pagination
-        :current-page="currentPage"
-        :total-pages="totalPages"
-        @page-change="handlePageChange"
-      />
     </div>
 
     <!-- 加载中 -->
