@@ -1,9 +1,11 @@
 <template>
   <div class="space-y-4">
-    <!-- 页面标题 -->
-    <div class="px-1">
+    <!-- tips 轮播 -->
+    <TipsBanner />
+
+    <!-- 页面标题：手机端隐藏，PC端显示 -->
+    <div class="hidden lg:block px-1">
       <h1 class="text-xl font-semibold text-zinc-900">所有分类</h1>
-      <p class="text-sm text-zinc-500 mt-1">选择你感兴趣的板块</p>
     </div>
 
     <!-- 分类网格（移动端 2 列，平板 3 列，桌面 4 列） -->

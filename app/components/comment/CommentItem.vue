@@ -21,7 +21,7 @@
         </div>
 
         <!-- 正文 -->
-        <div class="mt-1.5 text-sm text-zinc-700 markdown-body" v-html="renderMarkdown(comment.content)"></div>
+        <div class="mt-1.5 text-sm text-zinc-700 markdown-body" v-html="renderedContent"></div>
 
         <!-- 编辑框 -->
         <div v-if="editing" class="mt-2">
@@ -181,6 +181,9 @@ watch(() => props.comment.likeCount, (v) => { likeCount.value = v })
 const isAuthor = computed(() => !!user.value && user.value.id === props.comment.author.id)
 
 const timeAgo = useTimeAgo(() => new Date(props.comment.createdAt))
+
+// 缓存 markdown 渲染结果，避免每次组件更新都重新计算（性能优化）
+const renderedContent = computed(() => renderMarkdown(props.comment.content))
 
 // ── 悬赏采纳（发起人视角） ──
 const showAcceptConfirm = ref(false)

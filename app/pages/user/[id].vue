@@ -1,5 +1,8 @@
 <template>
   <div class="max-w-3xl mx-auto space-y-4">
+    <!-- tips 轮播 -->
+    <TipsBanner />
+
     <!-- 未登录：登录引导（资料接口需登录，与 /my/posts 同策略） -->
     <div v-if="!isLoggedIn" class="panel p-10 text-center">
       <p class="text-sm text-zinc-600 mb-4">登录后查看用户资料</p>
@@ -81,10 +84,6 @@
 
         <!-- 统计 -->
         <div class="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-6">
-          <div v-if="isOwnProfile" class="text-center p-3 rounded-lg bg-zinc-100">
-            <div class="text-xl font-bold text-emerald-600">🍗 {{ formatCount(profile.points ?? 0) }}</div>
-            <div class="text-[11px] text-zinc-500 mt-1">鸡腿余额</div>
-          </div>
           <div class="text-center p-3 rounded-lg bg-zinc-100">
             <div class="text-xl font-bold text-zinc-800">{{ formatCount(profile.totalPointsEarned) }}</div>
             <div class="text-[11px] text-zinc-500 mt-1">累计获得</div>
@@ -128,15 +127,6 @@
             等级由「累计获得鸡腿」决定，消费不降级 [R20]
           </p>
         </div>
-
-        <!-- 退出登录（仅本人视角；整改：TG 登录用户此前无注销渠道，桌面端只有侧栏/顶栏小头像下拉，手机端「我的」是唯一明显入口，这里给本人统一挂一个） -->
-        <button
-          v-if="isOwnProfile"
-          class="mt-4 w-full py-2.5 text-sm rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition-colors inline-flex items-center justify-center gap-2"
-          @click="handleLogout"
-        >
-          <AppIcon name="log-out" :size="14" /> 退出登录
-        </button>
       </div>
 
       <!-- 头像选择弹窗（统一弹窗封装） -->
@@ -181,36 +171,6 @@
           </div>
         </div>
       </AppModal>
-
-      <!-- 积分流水（仅本人可见） -->
-      <div v-if="isOwnProfile" class="panel p-6">
-        <h2 class="text-sm font-medium text-zinc-700 mb-4">🍗 积分流水</h2>
-
-        <div v-if="logLoading" class="py-6 text-center text-sm text-zinc-500">流水加载中…</div>
-        <div v-else-if="logItems.length === 0" class="py-8 text-center text-sm text-zinc-600">
-          还没有积分记录，去签到 / 发帖 / 评论赚鸡腿吧～
-        </div>
-        <div v-else class="divide-y divide-zinc-200/50">
-          <div v-for="item in logItems" :key="item.id" class="flex items-center justify-between py-3">
-            <div>
-              <div class="text-sm text-zinc-700">
-                {{ pointTypeLabel(item.type) }}
-                <span v-if="item.refId" class="text-zinc-600 text-xs ml-1">#{{ item.refId }}</span>
-              </div>
-              <div class="text-[11px] text-zinc-600 mt-0.5">{{ logTime(item.createdAt) }}</div>
-            </div>
-            <div class="text-right">
-              <span class="text-emerald-600 font-medium text-sm">+{{ item.delta }}</span>
-              <div class="text-[11px] text-zinc-600 mt-0.5">余额 {{ item.balanceAfter }}</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 分页 -->
-        <div v-if="logTotalPages > 1" class="flex justify-center mt-4">
-          <Pagination :current-page="logPage" :total-pages="logTotalPages" @page-change="handlePageChange" />
-        </div>
-      </div>
     </template>
     </template>
   </div>
@@ -218,8 +178,7 @@
 
 <script setup lang="ts">
 
-import type { PointLogItem, UserProfile } from '~/types'
-import { PointTypeLabel } from '~/types'
+import type { UserProfile } from '~/types'
 import { formatCount } from '~/utils/format'
 import { useUserProfile } from '~/composables/useUserProfile'
 import { useFollow } from '~/composables/useFollow'
@@ -236,7 +195,7 @@ const userId = Number(route.params.id)
 // 非法/越界 id 直接视为不存在，避免向 /api/users/NaN 发无效请求
 const userIdValid = Number.isInteger(userId) && userId > 0
 
-const { getProfile, getPointsLog, updateAvatar } = useUserProfile()
+const { getProfile, updateAvatar } = useUserProfile()
 const { toggleFollow } = useFollow()
 const { openChat } = useMessages()
 
@@ -402,36 +361,6 @@ async function handleAvatarSelect(avatar: string) {
   }
 }
 
-// ── 积分流水（分页，客户端加载） ──
-const logItems = ref<PointLogItem[]>([])
-const logPage = ref(1)
-const logTotalPages = ref(0)
-const logLoading = ref(false)
-
-async function loadLog(page = 1) {
-  logLoading.value = true
-  try {
-    const res = await getPointsLog(userId, page, 20)
-    logItems.value = res.items
-    logTotalPages.value = res.totalPages
-    logPage.value = res.page
-  } catch {
-    logItems.value = []
-    logTotalPages.value = 0
-  } finally {
-    logLoading.value = false
-  }
-}
-
-function handlePageChange(page: number) {
-  loadLog(page)
-}
-
-// 积分流水仅本人可见：登录且是本人时加载
-watch(isOwnProfile, (own) => {
-  if (own) loadLog(1)
-}, { immediate: true })
-
 // ── 展示辅助 ──
 // 等级名与下一等级名均来自后台配置（零硬编码）
 const { levelName, levels } = useGameConfig()
@@ -458,17 +387,4 @@ const joinedDate = computed(() => {
   if (!profile.value) return ''
   return new Date(profile.value.createdAt).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
 })
-
-function pointTypeLabel(type: string): string {
-  return PointTypeLabel[type] ?? type
-}
-
-function logTime(iso: string): string {
-  return new Date(iso).toLocaleString('zh-CN', {
-    month: 'numeric',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
 </script>
