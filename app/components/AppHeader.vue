@@ -1,7 +1,8 @@
 <template>
   <!-- 全宽毛玻璃导航栏：w-full 拉满视口；冷白底(white/75)与「冷白蜂巢」背景同系，
-       blur-xl 透出顶部淡蓝光晕；底缘 1px 冷灰渐变细线衔接内容区（视觉方向 A，§7.12） -->
-  <header class="sticky top-0 z-50 w-full bg-white/75 backdrop-blur-xl relative">
+       blur-xl 透出顶部淡蓝光晕；底缘 1px 冷灰渐变细线衔接内容区（视觉方向 A，§7.12）
+       pt-safe 适配刘海屏状态栏安全区（iOS/Android notch devices） -->
+  <header class="sticky top-0 z-50 w-full bg-white/75 backdrop-blur-xl relative pt-safe">
     <div class="px-4 lg:pl-[10vw] lg:pr-4">
     <!-- 底缘衔接线：冷灰渐变细线，替代暖金阴影，与背景光晕呼应 -->
     <div class="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-slate-400/25 via-slate-400/10 to-transparent" aria-hidden="true" />
