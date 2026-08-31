@@ -283,11 +283,18 @@
    showToolbarName 下 14 个带名字的按钮在窄栏(发帖主内容列 ~603px)会横向溢出、
    把「更多/预览/全屏」挤到视口外。收紧按钮内边距 + 名字字号,让全部按钮 + 名字
    不横向滚动。md-editor 全局样式是 `.md-editor .md-editor-stn .md-editor-toolbar-item`
-   (内边距 6px),这里用更高优先级选择器覆盖;名字字号同样提高优先级。 */
+   (内边距 6px),这里用更高优先级选择器覆盖;名字字号同样提高优先级。
+   移动端增加到 4px 防止胖手指误触(2026-08-31 UI优化)。 */
 .md-editor .md-editor-stn .md-editor-toolbar-item {
   padding-block: 0;
   padding-inline: 1px;
   margin-inline: 1px;
+}
+@media (max-width: 1023px) {
+  .md-editor .md-editor-stn .md-editor-toolbar-item {
+    padding-inline: 4px;
+    margin-inline: 0;
+  }
 }
 .md-editor .md-editor-toolbar-item-name {
   font-size: 10px;
