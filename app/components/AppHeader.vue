@@ -7,6 +7,14 @@
     <div class="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-slate-400/25 via-slate-400/10 to-transparent" aria-hidden="true" />
     <!-- Row 1: Logo + 搜索 + 用户 -->
     <div class="flex items-center h-12">
+      <!-- 移动端：汉堡按钮 → 打开板块抽屉（lg:hidden，仅手机） -->
+      <button
+        class="lg:hidden w-8 h-8 -ml-1 flex items-center justify-center rounded-md text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors shrink-0"
+        aria-label="菜单"
+        @click="toggleLeftDrawer"
+      >
+        <AppIcon name="menu" :size="18" />
+      </button>
       <!-- Logo：负空间融合——无卡片无阴影，直接落在毛玻璃导航栏上，保持通透轻盈（千问 §7.13） -->
       <a href="/" class="flex items-center gap-2 whitespace-nowrap flex-shrink-0 lg:w-44 group">
         <!-- Logo 图形：蓝底圆角块 + 白色芯片方块 + 四角电路触点（算力/Base 底层语义） -->
@@ -27,7 +35,7 @@
           alt="AI Base"
           width="98"
           height="26"
-          class="h-[26px] w-auto shrink-0 transition-transform group-hover:scale-[1.03]"
+          class="h-[26px] w-auto shrink-0 transition-transform group-hover:scale-[1.03] hidden sm:block"
         />
       </a>
 
@@ -176,6 +184,7 @@
 
 <script setup lang="ts">
 const { user, isLoggedIn, logout, openLogin, openRegister } = useAuth()
+const { toggleLeftDrawer } = useAppLayout()
 const realtime = useRealtime()
 const { unread, fetchUnread, setupRealtime: setupNotifRealtime } = useNotifications()
 const { unread: dmUnread, fetchUnread: fetchDmUnread, setupRealtime: setupDmRealtime } = useMessages()

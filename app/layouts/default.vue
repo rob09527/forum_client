@@ -4,7 +4,7 @@
   <div class="min-h-screen text-zinc-800 font-sans">
     <AppHeader />
 
-    <div class="px-4 lg:pl-[10vw] lg:pr-4 pb-8">
+    <div class="px-4 lg:pl-[10vw] lg:pr-4 pb-24 lg:pb-8">
       <div class="flex">
       <LeftSidebar
         :categories="categories"
@@ -63,6 +63,14 @@
 
         <!-- 浮动私信窗（任意页可唤起，共享 useMessages 状态） -->
         <ChatDrawer />
+
+        <!-- 移动端：底部 tab 导航 + 板块抽屉（lg:hidden，仅手机渲染） -->
+        <MobileNav />
+        <MobileCategoryDrawer
+          :categories="categories"
+          :active-category="activeCategory"
+          @select-category="handleSelectCategory"
+        />
       </div>
     </div>
   </template>
