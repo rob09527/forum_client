@@ -1,5 +1,27 @@
 <template>
   <div class="space-y-4">
+    <!-- 移动端分类横向滚动 Tabs（仅移动端显示） -->
+    <ClientOnly>
+      <div class="lg:hidden overflow-x-auto -mx-4 px-4 scrollbar-hide">
+        <div class="flex items-center gap-2 min-w-max pb-2">
+          <button
+            v-for="cat in categories"
+            :key="cat.slug"
+            :class="[
+              'flex items-center gap-1.5 px-3 h-8 text-sm rounded-full transition-all whitespace-nowrap shrink-0',
+              activeCategory === cat.slug
+                ? 'bg-blue-500 text-white shadow-sm'
+                : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 active:scale-95'
+            ]"
+            @click="handleCategoryChange(cat.slug)"
+          >
+            <CategoryIcon :name="cat.icon" class="w-4 h-4" />
+            <span>{{ cat.name }}</span>
+          </button>
+        </div>
+      </div>
+    </ClientOnly>
+
     <!-- 首页小 tips 轮播：替代固定品牌标语，克制不占位，每 6s 换一条（§7.14） -->
     <ClientOnly>
       <div class="flex items-center gap-1.5 px-1 min-h-5">
@@ -53,12 +75,16 @@ const route = useRoute()
 const router = useRouter()
 
 const { posts, totalPages, error: listError, loadPosts } = usePosts()
+const { categories } = useCategories()
 
 // 板块 / 标签由 URL 驱动，与 default.vue 的高亮逻辑保持一致
 const category = computed<string | undefined>(() => {
   const c = route.query.category as string | undefined
   return !c || c === 'general' ? undefined : c
 })
+
+// 当前激活的分类（用于高亮显示）
+const activeCategory = computed(() => (route.query.category as string) || 'general')
 
 // ── 首页标签行（由导航栏第二行移出，§7.13）──
 // 从全量标签池随机抽 6 个展示，客户端首次挂载时洗牌一次；高亮由 URL ?tag= 驱动
@@ -97,6 +123,19 @@ function toggleTag(name: string) {
   if (route.query.category) query.category = route.query.category
   if (activeTag.value === name) query.tag = undefined
   else query.tag = name
+  router.push({ path: '/', query })
+}
+
+/** 移动端分类切换：修改 URL 参数，切换板块时清除标签 */
+function handleCategoryChange(slug: string) {
+  const query: Record<string, string | undefined> = {}
+  if (slug === 'general') {
+    // general = 全部，移除 category 参数
+    delete query.category
+  } else {
+    query.category = slug
+  }
+  // 切换板块时清掉子标签，避免筛选叠加
   router.push({ path: '/', query })
 }
 
@@ -164,5 +203,14 @@ const errorMessage = computed(() => dataError.value ? '加载帖子失败' : lis
 .tip-leave-to {
   opacity: 0;
   transform: translateY(-6px);
+}
+
+/* 隐藏横向滚动条（保持滚动功能） */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 </style>

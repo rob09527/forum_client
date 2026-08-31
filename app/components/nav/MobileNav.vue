@@ -1,7 +1,7 @@
 <template>
   <!-- 移动端底部 tab 导航（lg:hidden，仅 <1024px 显示）。
-       5 槽：首页 / 商店 / [发帖 ➕] / 消息 / 我的；发帖为居中圆钮（论坛第一优先级动作），只显 ➕ 不显文字。
-       消息=私信(/messages)：顶栏铃铛(通知)手机端已常驻，私信没有固定入口，故「消息」tab 指私信。
+       5 槽：首页 / 分类 / [发帖 ➕] / 商店 / 我的；发帖为居中圆钮（论坛第一优先级动作），只显 ➕ 不显文字。
+       商店：积分商城入口，购买装扮/称号/头像框等。
        pb 适配 iOS Home 条安全区；固定底栏，主内容区由 default.vue 加对应底部内边距避让。
        不加 backdrop-blur：固定整宽栏滚动时对背后内容逐帧重算模糊，bg-white/95 下几乎不可见，纯耗电/掉帧。 -->
   <nav
@@ -9,19 +9,20 @@
     aria-label="移动端主导航"
   >
     <div class="grid grid-cols-5 items-stretch h-14">
-      <NuxtLink to="/" class="nav-tab justify-center" :class="navClass('/')">
+      <NuxtLink to="/" data-onboarding="nav-home" class="nav-tab justify-center" :class="navClass('/')">
         <AppIcon name="home" :size="20" />
         <span>首页</span>
       </NuxtLink>
 
-      <NuxtLink to="/shop" class="nav-tab justify-center" :class="navClass('/shop')">
-        <AppIcon name="shopping-cart" :size="20" />
-        <span>商店</span>
+      <NuxtLink to="/categories" data-onboarding="nav-categories" class="nav-tab justify-center" :class="navClass('/categories')">
+        <AppIcon name="grid" :size="20" />
+        <span>分类</span>
       </NuxtLink>
 
       <!-- 发帖 FAB：圆钮与其余 tab 同一水平线垂直居中（整改：原凸起设计圆心比 tab 图标高约 22px，入口不平行；去掉 absolute 抬高改为 justify-center） -->
       <NuxtLink
         to="/post/new"
+        data-onboarding="nav-post"
         class="nav-tab justify-center"
         :class="navClass('/post/new')"
         aria-label="发帖"
@@ -35,25 +36,17 @@
       </NuxtLink>
 
       <NuxtLink
-        to="/messages"
+        to="/shop"
+        data-onboarding="nav-shop"
         class="nav-tab justify-center"
-        :class="navClass('/messages')"
-        aria-label="消息（私信）"
+        :class="navClass('/shop')"
+        aria-label="商店"
       >
-        <span class="relative">
-          <AppIcon name="message-square" :size="20" />
-          <!-- 私信未读红点：与顶栏信封共用 useMessages().unread 全局单例（SSE 实时推送同一份数据） -->
-          <span
-            v-if="dmUnread > 0"
-            class="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-medium flex items-center justify-center"
-          >
-            {{ dmUnread > 99 ? '99+' : dmUnread }}
-          </span>
-        </span>
-        <span>消息</span>
+        <AppIcon name="shopping-cart" :size="20" />
+        <span>商店</span>
       </NuxtLink>
 
-      <button class="nav-tab justify-center" :class="navClass('/me')" @click="handleMe">
+      <button data-onboarding="nav-user" class="nav-tab justify-center" :class="navClass('/me')" @click="handleMe">
         <AppIcon name="user" :size="20" />
         <span>我的</span>
       </button>
@@ -64,16 +57,14 @@
 <script setup lang="ts">
 const route = useRoute()
 const { user, openLogin } = useAuth()
-// 私信未读总数：与 AppHeader 顶栏信封共用同一 useState('dm-unread') 单例，
-// 初始拉取与 SSE 订阅由 AppHeader onMounted 统一负责，这里只读不写。
-const { unread: dmUnread } = useMessages()
 
 /** 判断当前路由是否命中某个 tab（「/」精确匹配首页，「/me」聚合个人域下若干页面） */
 function isActive(prefix: string): boolean {
   const p = route.path
   if (prefix === '/') return p === '/'
+  if (prefix === '/categories') return p === '/categories'
   if (prefix === '/me') {
-    // 私信页(/messages)已独立为「消息」tab，不再归入「我的」
+    // 私信页(/messages)、通知页(/notifications)不归入「我的」，通过顶栏访问
     return p.startsWith('/user') || p.startsWith('/my') || p === '/following'
   }
   return p.startsWith(prefix)
