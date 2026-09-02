@@ -100,8 +100,12 @@ export function useOnboarding() {
       stagePadding: 10,
       stageRadius: 10,
       popoverClass: 'onboarding-popover',
-      // 不使用遮罩层，更轻量友好
-      showOverlay: false,
+      // 完全隐藏遮罩层
+      overlayOpacity: 0,
+      // 点击遮罩层不关闭引导（因为遮罩透明，用户可能是想点页面内容）
+      overlayClickBehavior: () => {
+        // 什么都不做，让用户能正常操作页面
+      },
       onPopoverRender: (popover, { config: driverConfig, state }) => {
         // 添加跳过按钮
         const footer = popover.wrapper.querySelector('.driver-popover-footer')

@@ -369,8 +369,18 @@ const widgetReady = ref(false)
 const { telegramBotUsername } = useRuntimeConfig().public
 
 function loadTelegramWidget() {
-  if (import.meta.server || !telegramContainer.value || widgetLoaded.value) return
+  console.log('[TG Widget] loadTelegramWidget 被调用', {
+    isServer: import.meta.server,
+    hasContainer: !!telegramContainer.value,
+    widgetLoaded: widgetLoaded.value,
+  })
 
+  if (import.meta.server || !telegramContainer.value || widgetLoaded.value) {
+    console.log('[TG Widget] loadTelegramWidget 提前返回')
+    return
+  }
+
+  console.log('[TG Widget] 开始加载 Widget')
   widgetLoaded.value = true // 标记开始加载，防止重复
 
   // 全局回调：Telegram widget 授权后把 user 对象回传（data-onauth 调用 window.onTelegramAuth）
@@ -390,7 +400,12 @@ function loadTelegramWidget() {
 
   // 脚本加载完成后标记为 ready
   script.onload = () => {
+    console.log('[TG Widget] Widget 加载完成')
     widgetReady.value = true
+  }
+  script.onerror = () => {
+    console.error('[TG Widget] Widget 加载失败')
+    widgetLoaded.value = false // 允许重试
   }
 
   telegramContainer.value.appendChild(script)
@@ -446,14 +461,17 @@ watch(showAuthModal, (open) => {
 // 监听退出登录后的 Widget 重置信号
 watch(resetTelegramWidget, (shouldReset) => {
   if (shouldReset) {
+    console.log('[TG Widget] 收到重置信号，开始清空...')
     widgetLoaded.value = false
     widgetReady.value = false
     if (telegramContainer.value) {
       telegramContainer.value.innerHTML = ''
+      console.log('[TG Widget] 容器已清空')
     }
     resetTelegramWidget.value = false // 重置标志
 
     // 重置后立即重新加载 Widget
+    console.log('[TG Widget] 准备重新加载...')
     nextTick(() => {
       loadTelegramWidget()
     })
