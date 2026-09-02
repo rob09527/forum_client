@@ -64,8 +64,9 @@ function isActive(prefix: string): boolean {
   if (prefix === '/') return p === '/'
   if (prefix === '/categories') return p === '/categories'
   if (prefix === '/me') {
-    // 私信页(/messages)、通知页(/notifications)不归入「我的」，通过顶栏访问
-    return p.startsWith('/user') || p.startsWith('/my') || p === '/following'
+    // 个人主页(/user/:id)、我的内容(/my/*)、积分流水(/me/points)都归入「我的」；
+    // 私信页(/messages)、通知页(/notifications)不归入，通过顶栏访问
+    return p.startsWith('/user') || p.startsWith('/my') || p.startsWith('/me') || p === '/following'
   }
   return p.startsWith(prefix)
 }

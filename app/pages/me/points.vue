@@ -34,10 +34,10 @@
               <div class="text-xs text-zinc-500 mb-1">累计获得</div>
               <div class="text-base font-semibold text-zinc-700 tabular-nums">{{ formatCount(totalEarned) }}</div>
             </div>
-            <!-- 累计消费 -->
+            <!-- 累计消费（后端按负向流水聚合，见 loadLog） -->
             <div class="flex-1">
               <div class="text-xs text-zinc-500 mb-1">累计消费</div>
-              <div class="text-base font-semibold text-zinc-700 tabular-nums">{{ formatCount(totalSpent) }}</div>
+              <div class="text-base font-semibold text-zinc-700 tabular-nums">{{ formatCount(totalExpense) }}</div>
             </div>
           </div>
         </div>
@@ -135,13 +135,12 @@ const page = ref(1)
 const totalPages = ref(0)
 const loading = ref(false)
 
-// 累计数据
-const totalEarned = computed(() => {
-  return user.value?.totalPointsEarned ?? 0
-})
-const totalSpent = computed(() => {
-  return totalEarned.value - balance.value
-})
+// 累计数据。累计获得/消费都来自后端 points-log 响应（等级口径 totalEarned + 负向流水聚合），
+// authUser(User) 不含 totalPointsEarned，不能在本地从 user 读取。
+const totalEarned = ref(0)
+// 累计消费：来自后端对 point_logs 负向流水的全量聚合。
+// 不能用 totalEarned - balance 推导——creditPoints 通道(打赏入账/悬赏退款)只加余额不累计，减法会失真。
+const totalExpense = ref(0)
 
 const emptyText = computed(() => {
   if (activeTab.value === 'income') return '还没有收入记录'
@@ -150,27 +149,23 @@ const emptyText = computed(() => {
 })
 
 /**
- * 加载积分流水
- * 注意：当前实现在前端过滤，实际生产环境应由后端支持 type 参数筛选，避免传输无关数据
+ * 加载积分流水：筛选(type)在 DB 层做，分页计数准确；顺带刷新全量收支合计。
  */
 async function loadLog() {
   if (!user.value) return
 
   loading.value = true
   try {
-    const res = await getPointsLog(user.value.id, page.value, 20)
-
-    // TODO: 后端应支持 ?type=income|expense 参数，避免前端过滤
-    // 当前为临时方案：前端过滤，适用于数据量小的场景
-    let filtered = res.items
-    if (activeTab.value === 'income') {
-      filtered = res.items.filter(item => item.delta > 0)
-    } else if (activeTab.value === 'expense') {
-      filtered = res.items.filter(item => item.delta < 0)
-    }
-
-    items.value = filtered
+    const res = await getPointsLog(
+      user.value.id,
+      page.value,
+      20,
+      activeTab.value === 'all' ? undefined : activeTab.value
+    )
+    items.value = res.items
     totalPages.value = res.totalPages
+    totalEarned.value = res.totalEarned
+    totalExpense.value = res.totalExpense
   } catch {
     items.value = []
     totalPages.value = 0

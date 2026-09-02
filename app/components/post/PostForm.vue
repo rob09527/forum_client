@@ -97,7 +97,7 @@
       <!-- 正文（完整 Markdown 编辑器：工具栏 + 图片上传 + 表情；hover 按钮可看用法，右上角可预览） -->
       <div data-onboarding="post-editor">
         <label class="block text-sm text-zinc-600 mb-1.5">正文</label>
-        <div data-onboarding="editor-toolbar">
+        <div>
         <MarkdownEditor
           v-model="content"
           toolbar="full"

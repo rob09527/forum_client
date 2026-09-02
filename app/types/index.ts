@@ -304,9 +304,9 @@ export const PointTypeLabel: Record<string, string> = {
 /** 积分流水项（与后端 PointLogItem 对齐） */
 export interface PointLogItem {
   id: number
-  /** 积分来源：checkin | post | comment | liked */
+  /** 积分来源：checkin | post | comment | liked | shop | tip_out | bounty_out … */
   type: string
-  /** 变动值（正数） */
+  /** 变动值（带符号：收入为正，消费/支出为负） */
   delta: number
   /** 变动后鸡腿余额 [R42] */
   balanceAfter: number
@@ -314,6 +314,16 @@ export interface PointLogItem {
   refId: number | null
   /** 变动时间，ISO 8601 */
   createdAt: string
+}
+
+/** 积分流水分页结果：附带资产总览（不随筛选/页码变化，供资产总览）。与后端 PointsLogResult 对齐 */
+export interface PointsLogResult extends Paginated<PointLogItem> {
+  /** 累计获得（等级口径，只增不减） */
+  totalEarned: number
+  /** 收入合计：全量正向流水之和 */
+  totalIncome: number
+  /** 支出合计：全量负向流水之和的绝对值，恒为非负 */
+  totalExpense: number
 }
 
 /** 签到状态（与后端 CheckinStatus 对齐，GET /api/checkin/status） */

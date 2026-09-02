@@ -134,6 +134,26 @@ export function useAuth() {
     }
   }
 
+  // ── Telegram "切换账号"的登出返回标记 ──
+  // Telegram oauth widget 无页内选号能力（见 AuthModal 注释）。切换账号的实现 =
+  // 整页跳 oauth.telegram.org/auth/logout 登出本站授权 → Telegram 重定向回本站。
+  // 离开页面前写标记，回来时 default.vue 检测到就自动重开登录弹窗。key 只在 useAuth 出现一次。
+  const TG_LOGOUT_PENDING_KEY = 'forum-tg-logout-pending'
+
+  /** 切换账号前调用：记录"正在跳 Telegram 登出"，返回后重开弹窗 */
+  function markTgAccountLogoutPending() {
+    if (import.meta.client) sessionStorage.setItem(TG_LOGOUT_PENDING_KEY, '1')
+  }
+
+  /** 应用启动/回到本站时调用：若带登出返回标记，自动重开登录弹窗并清标记 */
+  function resumeAfterTgLogout() {
+    if (import.meta.client && sessionStorage.getItem(TG_LOGOUT_PENDING_KEY)) {
+      sessionStorage.removeItem(TG_LOGOUT_PENDING_KEY)
+      authModalTab.value = 'login'
+      showAuthModal.value = true
+    }
+  }
+
   return {
     user: authUser,
     isLoggedIn,
@@ -150,5 +170,7 @@ export function useAuth() {
     openRegister,
     closeModal,
     updateUser,
+    markTgAccountLogoutPending,
+    resumeAfterTgLogout,
   }
 }

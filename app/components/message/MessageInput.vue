@@ -11,7 +11,6 @@
         class="flex-1 resize-none max-h-32 bg-white border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-800 placeholder-zinc-400 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30"
         @keydown.enter.exact.prevent="submit"
         @input="autoResize"
-        @focus="onFocus"
       />
       <button
         class="shrink-0 w-10 h-10 flex items-center justify-center rounded-lg bg-blue-500 hover:bg-blue-600 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors active:scale-95"
@@ -36,7 +35,6 @@ const toast = useToast()
 const text = ref('')
 const sending = ref(false)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
-const isKeyboardVisible = ref(false)
 
 const canSend = computed(() => text.value.trim().length > 0)
 
@@ -64,11 +62,6 @@ function autoResize(): void {
   if (!el) return
   el.style.height = 'auto'
   el.style.height = `${Math.min(el.scrollHeight, 128)}px`
-}
-
-/** 手机端聚焦时阻止页面滚动，通知 MessageList 暂停自动滚底 */
-function onFocus(): void {
-  isKeyboardVisible.value = true
 }
 
 // 移动端禁用自动聚焦（避免页面加载时自动弹键盘+滚动）

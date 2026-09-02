@@ -44,16 +44,13 @@ const route = useRoute()
 const router = useRouter()
 
 const { posts, totalPages, error: listError, loadPosts } = usePosts()
-const { categories } = useCategories()
 
-// 板块 / 标签由 URL 驱动，与 default.vue 的高亮逻辑保持一致
+// 当前板块由 URL 驱动：?category=general 是真实板块「综合讨论」要正常过滤；
+// 只有不带 category 参数（undefined）才表示全部帖子。
 const category = computed<string | undefined>(() => {
   const c = route.query.category as string | undefined
-  return !c || c === 'general' ? undefined : c
+  return c || undefined
 })
-
-// 当前激活的分类（用于高亮显示）
-const activeCategory = computed(() => (route.query.category as string) || 'general')
 
 // ── 首页标签行（由导航栏第二行移出，§7.13）──
 // 从全量标签池随机抽 6 个展示，客户端首次挂载时洗牌一次；高亮由 URL ?tag= 驱动
@@ -75,19 +72,6 @@ function toggleTag(name: string) {
   if (route.query.category) query.category = route.query.category
   if (activeTag.value === name) query.tag = undefined
   else query.tag = name
-  router.push({ path: '/', query })
-}
-
-/** 移动端分类切换：修改 URL 参数，切换板块时清除标签 */
-function handleCategoryChange(slug: string) {
-  const query: Record<string, string | undefined> = {}
-  if (slug === 'general') {
-    // general = 全部，移除 category 参数
-    delete query.category
-  } else {
-    query.category = slug
-  }
-  // 切换板块时清掉子标签，避免筛选叠加
   router.push({ path: '/', query })
 }
 

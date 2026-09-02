@@ -1,4 +1,4 @@
-import type { ApiResponse, NewUser, Paginated, PointLogItem, UserProfile } from '~/types'
+import type { ApiResponse, NewUser, PointsLogResult, UserProfile } from '~/types'
 import { useApiBase } from './api'
 
 /**
@@ -25,11 +25,11 @@ export function useUserProfile() {
     return res.data
   }
 
-  /** 分页查询积分流水 */
-  async function getPointsLog(id: number, page = 1, pageSize = 20): Promise<Paginated<PointLogItem>> {
-    const res = await $fetch<ApiResponse<Paginated<PointLogItem>>>(
+  /** 分页查询积分流水。type 可选：income=仅收入 / expense=仅支出 / 不传=全部（筛选在 DB 层做，分页计数准确） */
+  async function getPointsLog(id: number, page = 1, pageSize = 20, type?: 'income' | 'expense'): Promise<PointsLogResult> {
+    const res = await $fetch<ApiResponse<PointsLogResult>>(
       `${apiBase.value}/api/user/${id}/points-log`,
-      { query: { page, pageSize } }
+      { query: { page, pageSize, ...(type ? { type } : {}) } }
     )
     return res.data
   }

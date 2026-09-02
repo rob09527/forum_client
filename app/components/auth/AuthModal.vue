@@ -235,7 +235,7 @@
                 class="absolute inset-0 z-10 flex items-center justify-center gap-2 bg-white/60 rounded-lg"
               >
                 <div class="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full" />
-                <span class="text-sm text-gray-500">{{ telegramReloading ? '正在切换，请稍候...' : '加载 Telegram 登录...' }}</span>
+                <span class="text-sm text-gray-500">加载 Telegram 登录...</span>
               </div>
               <div ref="telegramContainer" class="w-full flex justify-center" />
             </div>
@@ -244,15 +244,15 @@
             <div v-if="telegramReady" class="mt-2 text-center">
               <button
                 type="button"
-                class="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors"
-                :disabled="telegramWidgetLoading"
+                class="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                :disabled="telegramWidgetLoading || telegramSwitching"
                 @click="handleSwitchTelegramAccount"
               >
-                使用其他 Telegram 账号登录
+                {{ telegramSwitching ? '正在跳转 Telegram 登出...' : '使用其他 Telegram 账号登录' }}
               </button>
             </div>
             <p v-if="telegramReady" class="text-[11px] text-gray-400 text-center mt-1">
-              切换账号需在 Telegram 授权窗口中确认
+              切换需在 Telegram 页面确认登出，完成后会自动回到本站
             </p>
 
             <!-- Telegram 错误提示（增强样式） -->
@@ -268,7 +268,8 @@
 </template>
 
 <script setup lang="ts">
-import type { TelegramAuthInput } from '~/types'
+import type { TelegramAuthInput, ApiResponse } from '~/types'
+import { useApiBase } from '~/composables/api'
 
 const {
   showAuthModal,
@@ -278,7 +279,10 @@ const {
   telegramLogin,
   isLoading,
   closeModal,
+  markTgAccountLogoutPending,
 } = useAuth()
+
+const toast = useToast()
 
 // ── 登录表单 ──
 const loginForm = reactive({ email: '', password: '' })
@@ -378,8 +382,8 @@ async function handleRegister() {
 //    脚本对 window message 监听的累积无冲突（handler 按 event.source 匹配各自 iframe）。
 const telegramContainer = ref<HTMLElement | null>(null)
 const telegramError = ref('')
-const telegramWidgetLoading = ref(false) // 脚本加载 / 重载中
-const telegramReloading = ref(false) // 是否由"切换账号"触发（文案区分）
+const telegramWidgetLoading = ref(false) // 脚本加载中
+const telegramSwitching = ref(false) // 正在跳 Telegram 登出换账号
 const telegramReady = ref(false) // widget iframe 就绪
 const { telegramBotUsername } = useRuntimeConfig().public
 
@@ -443,7 +447,6 @@ function mountTelegramScript() {
 /** 收起 loading，标记就绪 */
 function finishLoading() {
   telegramWidgetLoading.value = false
-  telegramReloading.value = false
   telegramReady.value = true
 }
 
@@ -471,27 +474,64 @@ async function handleTelegramAuth(user: TelegramAuthInput) {
     await nextTick()
     showAuthModal.value = false
 
+    // 新用户欢迎：走全局 toast（default.vue 的 welcome 引导另负责首次操作指引，这里只给即时反馈）
     if (result.isNewUser) {
-      // 新用户欢迎提示（延迟 300ms，确保弹窗关闭动画完成）
-      setTimeout(() => {
-        // TODO: 接入 toast 通知组件
-        console.log('🎉 欢迎加入 AI Base！')
-      }, 300)
+      toast.add({
+        title: '欢迎加入 AI Base 🎉',
+        description: '去签到 / 发帖赚鸡腿，逛逛商店换装扮吧',
+        color: 'success',
+      })
     }
   }
 }
 
-/** 用户主动切换 Telegram 账号：清残留 hash + 重建 widget，让 Telegram 重新走授权 */
-function handleSwitchTelegramAccount() {
-  if (telegramWidgetLoading.value) return // 已在加载/重载中，忽略连点
-  telegramReloading.value = true
-  initTelegramWidget()
+/**
+ * 用户主动切换 Telegram 账号。
+ *
+ * 重建 iframe 换账号是无效的：Telegram widget 授权状态记在 oauth.telegram.org 侧的会话里
+ * （"哪个 TG 账号授权过本站"），它不因本站重建 iframe 而改变，重建后点开仍是旧账号一键授权。
+ * 唯一可靠路径：整页跳 oauth.telegram.org/auth/logout 登出本站授权（bot_id 必须为数字 id、
+ * origin 必须命中 bot 在 Telegram 侧登记的合法域名），登出完成后 Telegram 会带 return_to
+ * 重定向回本站，default.vue 检测到 sessionStorage 标记自动重开登录弹窗 → 用户点 widget 即可选新账号。
+ *
+ * ⚠️ 本地 localhost 不在 bot 合法域名，与 widget 一样会被 Telegram 拒（Bot domain invalid），
+ * 此交互只能在生产域名真机验证。
+ */
+async function handleSwitchTelegramAccount() {
+  if (telegramWidgetLoading.value || telegramSwitching.value) return // 防连点
+  telegramSwitching.value = true
+  telegramError.value = ''
+  try {
+    const apiBase = useApiBase()
+    const res = await $fetch<ApiResponse<{ botId: number | null }>>(
+      `${apiBase.value}/api/auth/telegram/config`
+    )
+    const botId = res.success ? res.data.botId : null
+    if (!botId) {
+      telegramError.value = 'Telegram 配置缺失，暂时无法切换账号'
+      telegramSwitching.value = false
+      return
+    }
+    // 标记"登出返回后自动重开弹窗"（sessionStorage 跨整页跳转保留）
+    markTgAccountLogoutPending()
+    const redirectTarget =
+      'https://oauth.telegram.org/auth/logout' +
+      `?bot_id=${botId}` +
+      `&origin=${encodeURIComponent(window.location.origin)}` +
+      `&return_to=${encodeURIComponent(window.location.href)}`
+    window.location.href = redirectTarget // 整页跳转（页面随即卸载，无需复位 telegramSwitching）
+  } catch {
+    telegramError.value = '获取 Telegram 配置失败，请稍后重试'
+    telegramSwitching.value = false
+  }
 }
 
 // 弹窗打开时初始化 widget（每次打开重建，iframe 在关闭时已被 v-if 销毁）
+// immediate：应用冷启动即带 sessionStorage 标记回站时，AuthModal 挂载时弹窗可能已为开（resumeAfterTgLogout 置 true），
+// 此刻不会再有 false→true 的变化触发 watch，需在挂载时按当前值初始化
 watch(showAuthModal, (open) => {
   if (open) nextTick(initTelegramWidget)
-})
+}, { immediate: true })
 
 // 弹窗打开时聚焦
 watch(showAuthModal, (open) => {

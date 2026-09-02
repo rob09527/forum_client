@@ -1,6 +1,7 @@
 <template>
-  <!-- Session 恢复中的全局 Loading -->
-  <div v-if="isRestoring" class="fixed inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center">
+  <!-- Session 恢复中的全局 Loading。
+       不加 backdrop-blur：固定整屏遮罩对背后内容逐帧重算模糊，移动端耗电/掉帧，bg-white/85 已足够遮背景 -->
+  <div v-if="isRestoring" class="fixed inset-0 bg-white/85 z-50 flex items-center justify-center">
     <div class="flex flex-col items-center gap-3">
       <div class="animate-spin h-8 w-8 border-3 border-blue-500 border-t-transparent rounded-full" />
       <p class="text-sm text-gray-600">恢复会话中...</p>
@@ -102,16 +103,17 @@ const route = useRoute()
 const router = useRouter()
 
 const { categories } = useCategories()
-const { restoreSession, isLoggedIn, isRestoring } = useAuth()
+const { restoreSession, isLoggedIn, isRestoring, resumeAfterTgLogout } = useAuth()
 const { getHotPosts } = usePosts()
 const { getLatestUsers } = useUserProfile()
 const { adverts } = useAdverts()
 const { getAnnouncements } = useAnnouncements()
 const { startWelcomeTour, isCompleted } = useOnboarding()
 
-// 当前板块由 URL 驱动：/?category=llm；无参默认全部（general）
+// 当前板块由 URL 驱动：/?category=llm 等；无 category 参数 = 全部（真实分类 general=综合讨论，与「全部」无关）。
 // 这样任何页面点板块都会先跳回首页列表，且支持分享链接、浏览器前进后退。
-const activeCategory = computed(() => (route.query.category as string) || 'general')
+// activeCategory 用空串表示「全部」：CategoryList 顶部的「全部」入口选中态据此高亮。
+const activeCategory = computed(() => (route.query.category as string) || '')
 
 // 公告数据（SSR 拉取，上线公告按 sortOrder 倒序）
 const { data: announcements } = useAsyncData<Announcement[]>(
@@ -173,10 +175,12 @@ function stopAdTicker() {
 onMounted(() => {
   startAnnounceTicker()
   startAdTicker()
+  maybeStartWelcomeTour()
 })
 onBeforeUnmount(() => {
   stopAnnounceTicker()
   stopAdTicker()
+  clearWelcomeTourTimer()
 })
 // 公告数据就绪 / 条数变化时，重置到第一条并重启轮播
 watch(
@@ -216,34 +220,39 @@ if (import.meta.client) {
   restoreSession()
 }
 
-// 监听登录状态变化，触发首次登录引导
+// ── 首次登录 welcome 引导（单一时钟，onBeforeUnmount 清理）──
+// 触发条件：已登录 + 未完成过 welcome。单一入口函数同时覆盖「进入时已登录」与「进入后登录」，
+// 延迟等 DOM 完全渲染且引导标记元素挂载后再弹，避免两处重复调度。
+/** welcome 引导弹出延迟（毫秒）：让用户先适应登录后的界面，也确保引导目标元素已挂载 */
+const WELCOME_TOUR_DELAY_MS = 2000
+let welcomeTimer: ReturnType<typeof setTimeout> | undefined
+function clearWelcomeTourTimer() {
+  if (welcomeTimer) clearTimeout(welcomeTimer)
+  welcomeTimer = undefined
+}
+function maybeStartWelcomeTour() {
+  if (import.meta.server || !isLoggedIn.value || isCompleted('welcome')) return
+  clearWelcomeTourTimer()
+  welcomeTimer = setTimeout(() => {
+    welcomeTimer = undefined
+    if (isCompleted('welcome')) return
+    startWelcomeTour()
+  }, WELCOME_TOUR_DELAY_MS)
+}
 watch(isLoggedIn, (loggedIn) => {
-  if (loggedIn && import.meta.client) {
-    // 延迟执行，确保 DOM 已完全渲染且引导标记元素已挂载
-    // 延迟从 500ms 增加到 2000ms，给用户足够时间适应登录后的界面
-    nextTick(() => {
-      setTimeout(() => {
-        if (!isCompleted('welcome')) {
-          startWelcomeTour()
-        }
-      }, 2000)
-    })
-  }
+  if (loggedIn) maybeStartWelcomeTour()
 })
 
-// 如果页面加载时已登录，也检查是否需要引导
+// 从 oauth.telegram.org 登出重定向回本站时，自动重开登录弹窗继续"切换账号"流程。
+// 放 onMounted：此刻 AuthModal 子组件已挂载，其 watch(showAuthModal) 能捕获本次置 true 并 init widget
 onMounted(() => {
-  if (isLoggedIn.value && !isCompleted('welcome')) {
-    setTimeout(() => {
-      startWelcomeTour()
-    }, 2000)
-  }
+  resumeAfterTgLogout()
 })
 
-/** 点击板块：拼 URL 跳回首页（general=全部，移除 category 参数） */
+/** 点击板块：拼 URL 跳回首页。slug 为空串 = 全部（移除 category），其余均为真实分类 slug 直接过滤 */
 function handleSelectCategory(slug: string) {
   const query = { ...route.query } as Record<string, string>
-  if (slug === 'general') delete query.category
+  if (slug === '') delete query.category
   else query.category = slug
   delete query.tag // 切换板块时清掉子标签，避免筛选叠加
   router.push({ path: '/', query })

@@ -35,14 +35,9 @@
 const router = useRouter()
 const { categories } = useCategories()
 
-/** 选择分类：跳转到首页并带上 category 参数 */
+/** 选择分类：跳转到首页并按 slug 过滤（general=综合讨论是真实分类，与「全部」无关，一律带参数） */
 function handleSelectCategory(slug: string) {
-  if (slug === 'general') {
-    // general = 全部，不带参数
-    router.push('/')
-  } else {
-    router.push({ path: '/', query: { category: slug } })
-  }
+  router.push({ path: '/', query: { category: slug } })
 }
 
 // SEO 元数据

@@ -305,16 +305,24 @@ if (import.meta.client) {
   loadMonth(viewMonth.value)
 }
 
-// 首次访问签到页引导 - 改为被动触发：用户停留 3 秒未点击签到时提示
+// 首次访问签到页引导 - 被动触发：停留数秒仍未签到再提示（不打断正常签到操作）。
+// 定时器存句柄并在卸载时清理，避免用户提前离开页面后卡片在别处弹出。
+/** first-checkin 引导延迟（毫秒）：给用户先自己点签到的时间 */
+const FIRST_CHECKIN_TOUR_DELAY_MS = 3000
+let firstCheckinTimer: ReturnType<typeof setTimeout> | undefined
 onMounted(() => {
   if (isLoggedIn.value && !isCompleted('first-checkin') && !status.value.checkedToday) {
-    // 延迟 3 秒，如果用户还没签到，则触发引导
-    setTimeout(() => {
-      // 再次检查用户是否已经签到（可能在等待期间完成了签到）
+    firstCheckinTimer = setTimeout(() => {
+      firstCheckinTimer = undefined
+      // 再次检查：等待期间用户可能已自行签到或触发过其他引导
       if (!status.value.checkedToday && !isCompleted('first-checkin')) {
         startFirstCheckinTour()
       }
-    }, 3000)
+    }, FIRST_CHECKIN_TOUR_DELAY_MS)
   }
+})
+onBeforeUnmount(() => {
+  if (firstCheckinTimer) clearTimeout(firstCheckinTimer)
+  firstCheckinTimer = undefined
 })
 </script>

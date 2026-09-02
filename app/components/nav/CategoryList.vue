@@ -1,19 +1,40 @@
 <template>
   <!-- 板块分类卡片：桌面左侧栏与移动端抽屉共用（从 LeftSidebar 抽出，避免两处漂移）。
-       图标由后台自由配置（cat.icon），前端统一放进"图标砖"呈现，保证设计感一致。 -->
+       图标由后台自由配置（cat.icon），前端统一放进"图标砖"呈现，保证设计感一致。
+       顶部固定「全部」入口（slug 空串 = 不带 category 过滤）；general 是真实分类「综合讨论」，不在顶置位。 -->
   <div class="panel p-2">
     <h4 class="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-widest mb-2 px-1">
       <span class="w-1 h-3.5 rounded-full bg-blue-500/70" aria-hidden="true" />板块
     </h4>
     <nav class="space-y-0.5">
+      <!-- 全部：选中态 = 当前无 category 过滤 -->
+      <button
+        class="group flex items-center justify-between w-full px-2 h-9 text-sm rounded-md transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+        :class="rowClass(activeCategory === '')"
+        @click="$emit('select-category', '')"
+      >
+        <span class="flex items-center gap-2 min-w-0">
+          <span
+            aria-hidden="true"
+            :class="[
+              'w-6 h-6 rounded-md flex items-center justify-center shrink-0 transition-all duration-150',
+              activeCategory === ''
+                ? 'bg-blue-500/15 shadow-[0_1px_2px_rgb(59_130_246_/_0.25)]'
+                : 'bg-zinc-100 group-hover:bg-zinc-200/70 group-hover:-translate-y-px group-hover:shadow-sm'
+            ]"
+          >
+            <AppIcon name="compass" class="w-[18px] h-[18px]" />
+          </span>
+          <span class="truncate">全部</span>
+        </span>
+      </button>
+
       <button
         v-for="cat in categories"
         :key="cat.slug"
         :class="[
           'group flex items-center justify-between w-full px-2 h-9 text-sm rounded-md transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30',
-          activeCategory === cat.slug
-            ? 'bg-blue-500/15 text-blue-600 font-medium border-l-2 border-blue-500'
-            : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 border-l-2 border-transparent'
+          rowClass(activeCategory === cat.slug)
         ]"
         @click="$emit('select-category', cat.slug)"
       >
@@ -48,4 +69,11 @@ defineProps<{
 defineEmits<{
   'select-category': [slug: string]
 }>()
+
+/** 板块行选中/未选中态（选中蓝，未选中灰，全部入口复用同一套） */
+function rowClass(active: boolean) {
+  return active
+    ? 'bg-blue-500/15 text-blue-600 font-medium border-l-2 border-blue-500'
+    : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 border-l-2 border-transparent'
+}
 </script>
