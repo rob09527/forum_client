@@ -8,8 +8,6 @@ export function useAuth() {
   const authUser = useState<User | null>('auth-user', () => null)
   const showAuthModal = useState<boolean>('auth-modal', () => false)
   const authModalTab = useState<'login' | 'register'>('auth-modal-tab', () => 'login')
-  /** 重置 Telegram Widget 标志（退出登录时触发） */
-  const resetTelegramWidget = useState<boolean>('reset-tg-widget', () => false)
 
   const isLoggedIn = computed(() => authUser.value !== null)
   const isLoading = ref(false)
@@ -107,13 +105,9 @@ export function useAuth() {
       // 即使服务端退出失败，也清除本地状态
     }
     authUser.value = null
-    // 注意：不自动重置 Telegram Widget，用户下次登录会自动使用同一个 TG 账号
-    // 只有用户主动点击"切换账号"时才重置
-  }
-
-  /** 切换 Telegram 账号（用户主动触发） */
-  function switchTelegramAccount(): void {
-    resetTelegramWidget.value = true
+    // 刻意不销毁 Telegram widget：widget 记住的是 Telegram 侧(oauth.telegram.org)的会话，
+    // 与本站登录态无关。退出后重开弹窗，用户仍可一键以同一 TG 账号登录；
+    // 换账号在 AuthModal 内通过重载 iframe 引导完成。
   }
 
   /** 打开登录弹窗 */
@@ -147,7 +141,6 @@ export function useAuth() {
     isRestoring,
     showAuthModal,
     authModalTab,
-    resetTelegramWidget,
     login,
     register,
     telegramLogin,
@@ -157,6 +150,5 @@ export function useAuth() {
     openRegister,
     closeModal,
     updateUser,
-    switchTelegramAccount,
   }
 }

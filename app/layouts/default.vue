@@ -75,6 +75,9 @@
         <!-- 登录/注册弹窗 -->
         <AuthModal />
 
+        <!-- 新手引导卡片（非模态，登录后首次出现） -->
+        <OnboardingGuide />
+
         <!-- 浮动私信窗（任意页可唤起，共享 useMessages 状态） -->
         <ChatDrawer />
 
