@@ -240,10 +240,11 @@
             <div v-if="widgetReady" class="mt-2 text-center">
               <button
                 type="button"
-                class="text-xs text-gray-500 hover:text-gray-700 underline transition-colors"
+                class="text-xs text-gray-500 hover:text-gray-700 underline transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                :disabled="isResetting"
                 @click="handleSwitchTelegramAccount"
               >
-                使用其他 Telegram 账号登录
+                {{ isResetting ? '正在重置...' : '使用其他 Telegram 账号登录' }}
               </button>
             </div>
 
@@ -366,6 +367,7 @@ const telegramContainer = ref<HTMLElement | null>(null)
 const telegramError = ref('')
 const widgetLoaded = ref(false)
 const widgetReady = ref(false)
+const isResetting = ref(false) // 防止重复重置
 const { telegramBotUsername } = useRuntimeConfig().public
 
 function loadTelegramWidget() {
@@ -436,8 +438,13 @@ async function handleTelegramAuth(user: TelegramAuthInput) {
 
 /** 用户主动切换 Telegram 账号 */
 function handleSwitchTelegramAccount() {
+  if (isResetting.value) {
+    console.log('[TG Widget] 正在重置中，请稍候...')
+    return
+  }
+
+  isResetting.value = true
   switchTelegramAccount()
-  // watch 会自动监听到 resetTelegramWidget 变化，清空并重新加载 Widget
   console.log('已清除 Telegram 登录信息，正在重新加载...')
 }
 
@@ -474,6 +481,10 @@ watch(resetTelegramWidget, (shouldReset) => {
     console.log('[TG Widget] 准备重新加载...')
     nextTick(() => {
       loadTelegramWidget()
+      // 加载完成后解除重置状态
+      setTimeout(() => {
+        isResetting.value = false
+      }, 1000)
     })
   }
 })

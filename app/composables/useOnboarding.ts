@@ -88,7 +88,8 @@ export function useOnboarding() {
   function createDriver(config?: Partial<Config>): Driver {
     const defaultConfig: Config = {
       showProgress: true,
-      showButtons: ['next', 'previous', 'close'],
+      // 只保留导航按钮，不显示右上角的关闭 X
+      showButtons: ['next', 'previous'],
       nextBtnText: '下一步 →',
       prevBtnText: '← 上一步',
       doneBtnText: '完成 ✓',
@@ -96,16 +97,13 @@ export function useOnboarding() {
       animate: true,
       smoothScroll: true,
       disableActiveInteraction: false,
-      allowClose: true,
+      // 禁止点击关闭，只能通过按钮操作
+      allowClose: false,
       stagePadding: 10,
       stageRadius: 10,
       popoverClass: 'onboarding-popover',
       // 完全隐藏遮罩层
       overlayOpacity: 0,
-      // 点击遮罩层不关闭引导（因为遮罩透明，用户可能是想点页面内容）
-      overlayClickBehavior: () => {
-        // 什么都不做，让用户能正常操作页面
-      },
       onPopoverRender: (popover, { config: driverConfig, state }) => {
         // 添加跳过按钮
         const footer = popover.wrapper.querySelector('.driver-popover-footer')
@@ -117,8 +115,10 @@ export function useOnboarding() {
           skipBtn.onmouseover = () => { skipBtn.style.color = '#18181b' }
           skipBtn.onmouseout = () => { skipBtn.style.color = '#71717a' }
           skipBtn.onclick = () => {
-            driverInstance.value?.destroy()
-            markAsCompleted(type)
+            // 直接销毁 driver 实例
+            if (driverInstance.value) {
+              driverInstance.value.destroy()
+            }
           }
           footer.prepend(skipBtn)
         }
