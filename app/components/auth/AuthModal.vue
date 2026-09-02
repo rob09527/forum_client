@@ -422,8 +422,8 @@ async function handleTelegramAuth(user: TelegramAuthInput) {
 /** 用户主动切换 Telegram 账号 */
 function handleSwitchTelegramAccount() {
   switchTelegramAccount()
-  // 提示用户操作成功
-  console.log('已清除 Telegram 登录信息，请重新授权')
+  // watch 会自动监听到 resetTelegramWidget 变化，清空并重新加载 Widget
+  console.log('已清除 Telegram 登录信息，正在重新加载...')
 }
 
 // 弹窗打开时加载 widget（只加载一次）
@@ -452,6 +452,11 @@ watch(resetTelegramWidget, (shouldReset) => {
       telegramContainer.value.innerHTML = ''
     }
     resetTelegramWidget.value = false // 重置标志
+
+    // 重置后立即重新加载 Widget
+    nextTick(() => {
+      loadTelegramWidget()
+    })
   }
 })
 </script>

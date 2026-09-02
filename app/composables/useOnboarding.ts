@@ -113,10 +113,8 @@ export function useOnboarding() {
           skipBtn.onmouseover = () => { skipBtn.style.color = '#18181b' }
           skipBtn.onmouseout = () => { skipBtn.style.color = '#71717a' }
           skipBtn.onclick = () => {
-            const shouldSkip = confirm('确定跳过新手引导吗？\n\n你可以稍后在个人设置中重新查看引导。')
-            if (shouldSkip && driverInstance.value) {
-              driverInstance.value.destroy()
-            }
+            driverInstance.value?.destroy()
+            markAsCompleted(type)
           }
           footer.prepend(skipBtn)
         }
@@ -170,8 +168,8 @@ export function useOnboarding() {
       {
         element: 'header',
         popover: {
-          title: '欢迎来到 AI Base 论坛 🎉',
-          description: '这里是 AI 技术爱好者的交流社区\n\n• 1000+ 活跃用户分享经验\n• 每天都有新鲜的技术讨论\n• 签到/发帖获得积分，兑换专属装扮\n\n让我们用 30 秒带你快速上手！',
+          title: '👋 嗨，欢迎来到 AI Base！',
+          description: '我们是一个 AI 技术爱好者的交流社区\n\n这里有 1000+ 小伙伴在分享最新的 AI 技术和经验\n每天都有新鲜的讨论，签到和发帖还能赚积分换装扮\n\n花 30 秒带你转一圈 😊',
           side: 'bottom',
           align: 'start',
         },
@@ -179,8 +177,8 @@ export function useOnboarding() {
       {
         element: 'aside:first-of-type',
         popover: {
-          title: '内容分类 📚',
-          description: '左侧是板块分类，点击找到你感兴趣的主题，精准浏览相关内容。',
+          title: '📚 这里是内容分类',
+          description: '想看什么主题？点左边的分类就能快速找到\n\nAI 工具、大模型、提示词...都给你分好类了',
           side: 'right',
           align: 'start',
         },
@@ -188,8 +186,8 @@ export function useOnboarding() {
       {
         element: 'main',
         popover: {
-          title: '内容区域 📝',
-          description: '这里展示最新和最热的帖子。点击标题查看详情，可以点赞、评论和打赏优质内容。',
+          title: '📝 这是内容区',
+          description: '所有帖子都在这里展示\n\n看到喜欢的就点进去，还可以点赞、评论\n遇到特别好的内容，别忘了打赏支持作者哦',
           side: 'left',
           align: 'start',
         },
@@ -197,24 +195,24 @@ export function useOnboarding() {
       {
         element: 'aside:last-of-type',
         popover: {
-          title: '发现更多 🔥',
-          description: '右侧边栏展示热门帖子和最新用户，帮助你快速发现感兴趣的内容。',
+          title: '🔥 热门推荐',
+          description: '右边是热门帖子和新来的小伙伴\n\n想快速找到优质内容？看这里就对了',
           side: 'left',
           align: 'start',
         },
       },
       {
         popover: {
-          title: '积分系统 🍗',
-          description: '• 每日签到：获得 5-20 鸡腿\n• 发帖/评论：内容越优质奖励越多\n• 积分用途：购买装扮、打赏作者、发悬赏帖\n\n连续签到还有额外加成！',
+          title: '🍗 关于积分系统',
+          description: '我们用鸡腿作为积分（是不是很可爱？）\n\n• 每天签到可以领 5-20 个鸡腿\n• 发帖、评论也能赚鸡腿\n• 用鸡腿可以买装扮、打赏别人、发悬赏帖\n\n连续签到还有加成，别忘了每天来打卡哦！',
           side: 'top',
           align: 'center',
         },
       },
       {
         popover: {
-          title: '开始你的旅程 🚀',
-          description: '你已经掌握了基本操作！现在可以：\n\n📅 去签到领取新手积分\n🔥 浏览热门帖子\n✍️ 发布你的第一篇帖子',
+          title: '🚀 准备好了吗？',
+          description: '基本操作就是这些啦！\n\n接下来你可以：\n📅 去签到页领新手积分\n🔥 浏览热门帖子看看大家在聊什么\n✍️ 发布你的第一篇帖子\n\n祝你在 AI Base 玩得开心 🎉',
           side: 'top',
           align: 'center',
         },
@@ -228,15 +226,10 @@ export function useOnboarding() {
       onNextClick: (element, step, opts) => {
         const currentIndex = opts.index ?? 0
 
-        // 最后一步：提供行动选项
+        // 最后一步：自然结束，不打断用户
         if (currentIndex === 5) {
           driverObj.destroy()
-
-          // 使用更友好的方式提示用户
-          const action = confirm('🎉 新手引导完成！\n\n点击"确定"前往签到领积分\n点击"取消"继续浏览')
-          if (action) {
-            navigateTo('/checkin')
-          }
+          // 引导自然结束，用户可以自由探索
         } else {
           driverObj.moveNext()
         }
@@ -255,8 +248,8 @@ export function useOnboarding() {
     const steps: DriveStep[] = [
       {
         popover: {
-          title: '欢迎来到 AI Base 论坛 🎉',
-          description: '这里是 AI 技术爱好者的交流社区\n\n• 每天都有新鲜的技术讨论\n• 签到/发帖获得积分奖励\n• 用积分兑换专属装扮\n\n让我们用 20 秒带你快速上手！',
+          title: '👋 嗨，欢迎来到 AI Base！',
+          description: '我们是 AI 技术爱好者的小天地\n\n每天都有小伙伴在分享最新的技术和经验\n签到发帖能赚积分，还能换装扮\n\n20 秒带你快速上手 😊',
           side: 'top',
           align: 'center',
         },
@@ -264,24 +257,24 @@ export function useOnboarding() {
       {
         element: 'nav[aria-label="移动端主导航"]',
         popover: {
-          title: '底部导航 📱',
-          description: '首页浏览内容、发帖分享想法、商店兑换装扮、个人中心查看资料。所有核心功能都在这里！',
+          title: '📱 底部导航栏',
+          description: '首页看帖子、发帖分享、商店换装扮、个人中心\n\n所有核心功能都在这里，轻轻一点就能用',
           side: 'top',
           align: 'center',
         },
       },
       {
         popover: {
-          title: '积分系统 🍗',
-          description: '• 每日签到：获得 5-20 鸡腿\n• 发帖/评论：内容越优质奖励越多\n• 积分用途：购买装扮、打赏作者、发悬赏帖\n\n连续签到还有额外加成哦！',
+          title: '🍗 积分怎么玩？',
+          description: '我们用鸡腿当积分（可爱吧）\n\n• 每天签到领 5-20 个鸡腿\n• 发帖评论也能赚\n• 用鸡腿买装扮、打赏、发悬赏\n\n连续签到有加成哦！',
           side: 'top',
           align: 'center',
         },
       },
       {
         popover: {
-          title: '开始探索吧 🚀',
-          description: '你已经掌握了基本操作！现在可以：\n\n📅 去签到领取新手积分\n🔥 浏览热门帖子\n✍️ 发布你的第一篇帖子',
+          title: '🚀 开始玩吧！',
+          description: '基本操作就这些啦\n\n📅 去签到领新手积分\n🔥 逛逛热门帖子\n✍️ 发你的第一篇帖子\n\n祝你玩得开心 🎉',
           side: 'top',
           align: 'center',
         },
@@ -295,15 +288,10 @@ export function useOnboarding() {
       onNextClick: (element, step, opts) => {
         const currentIndex = opts.index ?? 0
 
-        // 最后一步：提供行动选项
+        // 最后一步：自然结束，不打断用户
         if (currentIndex === 3) {
           driverObj.destroy()
-
-          // 使用更友好的方式提示用户
-          const action = confirm('🎉 新手引导完成！\n\n点击"确定"前往签到领积分\n点击"取消"继续浏览')
-          if (action) {
-            navigateTo('/checkin')
-          }
+          // 引导自然结束，用户可以自由探索
         } else {
           driverObj.moveNext()
         }
