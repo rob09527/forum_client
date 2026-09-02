@@ -103,7 +103,7 @@ const route = useRoute()
 const router = useRouter()
 
 const { categories } = useCategories()
-const { restoreSession, isLoggedIn, isRestoring, resumeAfterTgLogout } = useAuth()
+const { restoreSession, isLoggedIn, isRestoring } = useAuth()
 const { getHotPosts } = usePosts()
 const { getLatestUsers } = useUserProfile()
 const { adverts } = useAdverts()
@@ -241,12 +241,6 @@ function maybeStartWelcomeTour() {
 }
 watch(isLoggedIn, (loggedIn) => {
   if (loggedIn) maybeStartWelcomeTour()
-})
-
-// 从 oauth.telegram.org 登出重定向回本站时，自动重开登录弹窗继续"切换账号"流程。
-// 放 onMounted：此刻 AuthModal 子组件已挂载，其 watch(showAuthModal) 能捕获本次置 true 并 init widget
-onMounted(() => {
-  resumeAfterTgLogout()
 })
 
 /** 点击板块：拼 URL 跳回首页。slug 为空串 = 全部（移除 category），其余均为真实分类 slug 直接过滤 */

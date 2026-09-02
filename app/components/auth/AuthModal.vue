@@ -237,22 +237,76 @@
                 <div class="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full" />
                 <span class="text-sm text-gray-500">加载 Telegram 登录...</span>
               </div>
+
+              <!-- 连不上 Telegram 服务（断网 / 未开代理 / 被屏蔽 / 超时）：友好提示 + 重试，绝不让弹窗卡死 -->
+              <div
+                v-if="telegramUnavailable"
+                class="w-full flex flex-col items-center gap-2 rounded-lg border border-amber-200 bg-amber-50/70 px-4 py-4"
+              >
+                <AppIcon name="alert-triangle" :size="18" class="text-amber-500" />
+                <p class="text-xs leading-relaxed text-amber-700 text-center">
+                  {{ telegramUnavailableMsg }}
+                </p>
+                <button
+                  type="button"
+                  class="mt-1 h-8 px-4 text-xs font-medium rounded-lg bg-white border border-amber-300 text-amber-700 hover:bg-amber-100 transition-colors"
+                  @click="retryTelegramWidget"
+                >
+                  重新加载
+                </button>
+              </div>
+
               <div ref="telegramContainer" class="w-full flex justify-center" />
             </div>
 
-            <!-- 切换账号提示（仅在 Widget 就绪后显示） -->
-            <div v-if="telegramReady" class="mt-2 text-center">
+            <!-- 切换账号：入口文字按钮 / 展开的引导面板（二选一） -->
+            <div v-if="telegramReady" class="mt-2">
               <button
+                v-if="!showTgSwitchGuide"
                 type="button"
-                class="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                :disabled="telegramWidgetLoading || telegramSwitching"
+                class="w-full text-center text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                :disabled="telegramWidgetLoading"
                 @click="handleSwitchTelegramAccount"
               >
-                {{ telegramSwitching ? '正在跳转 Telegram 登出...' : '使用其他 Telegram 账号登录' }}
+                使用其他 Telegram 账号登录
               </button>
+
+              <!-- 引导面板：Telegram 不允许网站代登出（实测 auth/logout 跳转不生效，见 docs/Telegram登录优化修复-2026-09-02.md §八），
+                   改为指引用户在 TG 侧断开本 bot 授权后回来用新账号走完整授权 -->
+              <div v-else class="text-left rounded-xl border border-zinc-200 bg-zinc-50 p-4 space-y-2.5">
+                <p class="text-sm font-medium text-zinc-800 flex items-center gap-1.5">
+                  <AppIcon name="info" :size="15" class="text-blue-500" />
+                  切换 Telegram 账号
+                </p>
+                <p class="text-xs leading-relaxed text-zinc-600">
+                  Telegram 出于安全限制不允许网站替你登出当前授权——直接点按钮只会回到旧账号的一键登录。
+                  要换用其它账号，请先在 Telegram 侧断开本 bot：
+                </p>
+                <ol class="text-xs leading-relaxed text-zinc-600 space-y-1.5 list-decimal pl-4">
+                  <li>打开 Telegram（手机 / 桌面 App）→ 设置 → 隐私与安全 → <span class="text-zinc-800">已连接网站 / 登录授权</span>。</li>
+                  <li>找到本 bot <span class="text-blue-600">@{{ telegramBotUsername }}</span>，移除 / 断开连接。</li>
+                  <li>回本站点下方按钮，用<strong>另一个</strong> Telegram 账号重新授权（会要求输入新账号手机号或扫码）。</li>
+                </ol>
+                <div class="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    class="flex-1 h-9 text-xs font-medium rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-colors"
+                    @click="reloadTelegramWidget"
+                  >
+                    我已断开，重新加载登录
+                  </button>
+                  <button
+                    type="button"
+                    class="px-3 h-9 text-xs rounded-lg border border-zinc-300 text-zinc-600 hover:bg-zinc-100 transition-colors"
+                    @click="showTgSwitchGuide = false"
+                  >
+                    返回
+                  </button>
+                </div>
+              </div>
             </div>
-            <p v-if="telegramReady" class="text-[11px] text-gray-400 text-center mt-1">
-              切换需在 Telegram 页面确认登出，完成后会自动回到本站
+            <p v-if="telegramReady && !showTgSwitchGuide" class="text-[11px] text-gray-400 text-center mt-1">
+              想换账号？需先在 Telegram 侧断开本 bot，本站无法代登出
             </p>
 
             <!-- Telegram 错误提示（增强样式） -->
@@ -268,8 +322,7 @@
 </template>
 
 <script setup lang="ts">
-import type { TelegramAuthInput, ApiResponse } from '~/types'
-import { useApiBase } from '~/composables/api'
+import type { TelegramAuthInput } from '~/types'
 
 const {
   showAuthModal,
@@ -279,7 +332,6 @@ const {
   telegramLogin,
   isLoading,
   closeModal,
-  markTgAccountLogoutPending,
 } = useAuth()
 
 const toast = useToast()
@@ -383,8 +435,10 @@ async function handleRegister() {
 const telegramContainer = ref<HTMLElement | null>(null)
 const telegramError = ref('')
 const telegramWidgetLoading = ref(false) // 脚本加载中
-const telegramSwitching = ref(false) // 正在跳 Telegram 登出换账号
 const telegramReady = ref(false) // widget iframe 就绪
+const showTgSwitchGuide = ref(false) // 「切换账号」引导面板是否展开
+const telegramUnavailable = ref(false) // 连不上 Telegram 服务（断网/未开代理/被屏蔽/超时），widget 不可用
+const telegramUnavailableMsg = ref('') // 连不上 TG 时的友好提示文案
 const { telegramBotUsername } = useRuntimeConfig().public
 
 /** Telegram 生成的 iframe id（按其源码规则：bot 名非 [a-z0-9_] 字符转 -） */
@@ -410,9 +464,47 @@ function clearTgAuthHash() {
   }
 }
 
+/** 网络/代理问题导致的"连不上 TG"加载失败最大等待时间：超过即判失败并友好提示，避免弹窗无限转圈 */
+const TG_LOAD_TIMEOUT_MS = 12000
+/** 脚本加载超时看门狗计时器 */
+let telegramLoadTimer: ReturnType<typeof setTimeout> | undefined
+/** iframe 载入兜底（1.2s）计时器 */
+let telegramIframeFallbackTimer: ReturnType<typeof setTimeout> | undefined
+
+/** 取消所有 Telegram 加载计时器：防止重试/重开后旧计时器误触发把新 cycle 置为就绪 */
+function clearTelegramLoadTimer() {
+  if (telegramLoadTimer) {
+    clearTimeout(telegramLoadTimer)
+    telegramLoadTimer = undefined
+  }
+  if (telegramIframeFallbackTimer) {
+    clearTimeout(telegramIframeFallbackTimer)
+    telegramIframeFallbackTimer = undefined
+  }
+}
+
+/**
+ * Telegram 服务不可达（断网 / 未开代理 / 被屏蔽 / 超时）的统一降级入口：
+ * 清空容器、收掉 loading，切换成"连不上 TG"的友好提示面板，绝不让弹窗卡死或一直转圈。
+ * 具体文案由调用方按场景给出（国内未开代理访问不到 Telegram 的情况尤其要说明）。
+ */
+function failTelegramLoad(msg: string) {
+  clearTelegramLoadTimer()
+  telegramContainer.value?.replaceChildren() // 清掉可能残留的 script/iframe，避免重试时 iframe id 冲突
+  telegramWidgetLoading.value = false
+  telegramReady.value = false
+  telegramUnavailableMsg.value = msg
+  telegramUnavailable.value = true
+}
+
 /** 挂载 Telegram 登录脚本（每次弹窗打开 / 切换账号都重建 iframe，见文件头注释） */
 function mountTelegramScript() {
-  if (import.meta.server || !telegramContainer.value) return
+  if (import.meta.server) return
+  clearTelegramLoadTimer() // 中止上一轮可能未触发的计时器
+  if (!telegramContainer.value) {
+    failTelegramLoad('Telegram 登录组件容器未就绪，请刷新页面重试')
+    return
+  }
 
   // 全局回调：Telegram widget 授权后把 user 对象回传（data-onauth 调用 window.onTelegramAuth）
   ;(window as any).onTelegramAuth = (user: TelegramAuthInput) => handleTelegramAuth(user)
@@ -428,37 +520,65 @@ function mountTelegramScript() {
   script.setAttribute('data-onauth', 'onTelegramAuth(user)')
 
   script.onload = () => {
+    clearTelegramLoadTimer()
     // 脚本同步执行后 iframe 已插入容器；等待 iframe 内嵌 oauth 页加载完成再收起 loading
     const iframe = document.getElementById(tgIframeId())
     if (iframe) {
       iframe.addEventListener('load', () => finishLoading())
+      // oauth.telegram.org 本体连不上（脚本可达但 oauth 被屏蔽的边界场景）→ 也走友好提示
+      iframe.addEventListener('error', () =>
+        failTelegramLoad('无法加载 Telegram 登录组件，请检查网络 / 代理后重试'))
     }
     // 兜底：iframe load 事件可能受跨域/网络影响不触发，最多等 1.2s 必收起（避免无限转圈）
-    setTimeout(finishLoading, 1200)
+    telegramIframeFallbackTimer = setTimeout(finishLoading, 1200)
   }
   script.onerror = () => {
-    telegramError.value = 'Telegram 登录组件加载失败，请刷新页面后重试'
-    telegramWidgetLoading.value = false
-    telegramReady.value = true // 保留切换按钮便于重试
+    clearTelegramLoadTimer()
+    // 脚本 fetch 失败：多为 telegram.org 被网络屏蔽（国内未开代理的典型场景）
+    failTelegramLoad('无法连接 Telegram 登录服务。部分网络环境（如未开启代理）访问不到 Telegram，可稍后重试，或用上方邮箱登录。')
   }
   telegramContainer.value.appendChild(script)
+
+  // 超时看门狗：脚本既无 onload 也无 onerror（连接被挂起，被墙时常见）→ 到时判失败，绝不无限转圈
+  telegramLoadTimer = setTimeout(() => {
+    if (telegramWidgetLoading.value) {
+      failTelegramLoad('连接 Telegram 登录服务超时。部分网络环境（如未开启代理）访问不到 Telegram，请检查网络 / 代理后重试。')
+    }
+  }, TG_LOAD_TIMEOUT_MS)
 }
 
-/** 收起 loading，标记就绪 */
+/** 收起 loading，标记就绪（仅当确实在加载中且未被判"连不上 TG"时才生效，防旧计时器误触发） */
 function finishLoading() {
-  telegramWidgetLoading.value = false
-  telegramReady.value = true
+  if (telegramWidgetLoading.value && !telegramUnavailable.value) {
+    telegramWidgetLoading.value = false
+    telegramReady.value = true
+  }
 }
 
-/** 初始化 / 重载 widget：先清残留 hash，再清空容器重建 iframe */
+/** 初始化 / 重载 widget：先复位"连不上 TG"状态，再清残留 hash、清空容器重建 iframe */
 function initTelegramWidget() {
   if (import.meta.server || !telegramContainer.value) return
+
+  clearTelegramLoadTimer() // 中止上一轮可能未触发的计时器
+  telegramUnavailable.value = false
+  telegramUnavailableMsg.value = ''
+  // 浏览器离线：直接给友好提示，不必等脚本请求超时
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    failTelegramLoad('当前网络不可用，暂时无法连接 Telegram 登录服务。恢复网络后将自动重试。')
+    return
+  }
 
   clearTgAuthHash()
   telegramContainer.value.replaceChildren() // 清掉可能残留的旧 script/iframe，确保新 iframe 无 id 冲突
   telegramWidgetLoading.value = true
   telegramReady.value = false
   mountTelegramScript()
+}
+
+/** 从"连不上 TG"面板手动重试：清错误、重新初始化 widget */
+function retryTelegramWidget() {
+  telegramError.value = ''
+  initTelegramWidget()
 }
 
 async function handleTelegramAuth(user: TelegramAuthInput) {
@@ -488,46 +608,56 @@ async function handleTelegramAuth(user: TelegramAuthInput) {
 /**
  * 用户主动切换 Telegram 账号。
  *
- * 重建 iframe 换账号是无效的：Telegram widget 授权状态记在 oauth.telegram.org 侧的会话里
- * （"哪个 TG 账号授权过本站"），它不因本站重建 iframe 而改变，重建后点开仍是旧账号一键授权。
- * 唯一可靠路径：整页跳 oauth.telegram.org/auth/logout 登出本站授权（bot_id 必须为数字 id、
- * origin 必须命中 bot 在 Telegram 侧登记的合法域名），登出完成后 Telegram 会带 return_to
- * 重定向回本站，default.vue 检测到 sessionStorage 标记自动重开登录弹窗 → 用户点 widget 即可选新账号。
+ * 曾实现为整页跳 `oauth.telegram.org/auth/logout` 登出本站授权后回站重开弹窗选新号，
+ * 但测试服真机验证该跳转不生效：Telegram 侧登出链接带会话 hash（外部不可得），裸 URL 只会
+ * 回到旧账号的一键授权页（见 docs/Telegram登录优化修复-2026-09-02.md §八）。重建 iframe 同理无效。
  *
- * ⚠️ 本地 localhost 不在 bot 合法域名，与 widget 一样会被 Telegram 拒（Bot domain invalid），
- * 此交互只能在生产域名真机验证。
+ * 因此改为**引导式**：不自动跳转，展开引导面板，指引用户在 Telegram 侧（设置 → 隐私与安全 →
+ * 已连接网站 / 登录授权）移除本 bot 授权后，回来用新账号重新授权登录。这是 Telegram 的机制限制，
+ * 网站侧无自动化换号路径，避免给用户"点一下就能换"的错误预期。
  */
-async function handleSwitchTelegramAccount() {
-  if (telegramWidgetLoading.value || telegramSwitching.value) return // 防连点
-  telegramSwitching.value = true
+function handleSwitchTelegramAccount() {
+  if (telegramWidgetLoading.value) return // 脚本加载中忽略点击
   telegramError.value = ''
-  try {
-    const apiBase = useApiBase()
-    const res = await $fetch<ApiResponse<{ botId: number | null }>>(
-      `${apiBase.value}/api/auth/telegram/config`
-    )
-    const botId = res.success ? res.data.botId : null
-    if (!botId) {
-      telegramError.value = 'Telegram 配置缺失，暂时无法切换账号'
-      telegramSwitching.value = false
-      return
-    }
-    // 标记"登出返回后自动重开弹窗"（sessionStorage 跨整页跳转保留）
-    markTgAccountLogoutPending()
-    const redirectTarget =
-      'https://oauth.telegram.org/auth/logout' +
-      `?bot_id=${botId}` +
-      `&origin=${encodeURIComponent(window.location.origin)}` +
-      `&return_to=${encodeURIComponent(window.location.href)}`
-    window.location.href = redirectTarget // 整页跳转（页面随即卸载，无需复位 telegramSwitching）
-  } catch {
-    telegramError.value = '获取 Telegram 配置失败，请稍后重试'
-    telegramSwitching.value = false
+  showTgSwitchGuide.value = true
+}
+
+/** 用户按引导断开授权后调用：收起引导并重载 widget，使其反映最新的 Telegram 会话状态 */
+function reloadTelegramWidget() {
+  showTgSwitchGuide.value = false
+  telegramError.value = ''
+  initTelegramWidget()
+}
+
+// 网络可达性监听：断网 / 恢复联网时对 Telegram widget 做即时反馈。
+// 场景：国内用户未开代理访问不到 telegram.org/oauth → 脚本请求被挂起或失败，
+// 必须给友好提示（见 failTelegramLoad），而不是让弹窗一直转圈或白屏。
+
+/** 网络恢复：若正停在"连不上 TG"面板上，自动重载 widget（用户开代理 / 切回有网后无感续上） */
+function handleTelegramNetOnline() {
+  if (telegramUnavailable.value && showAuthModal.value) retryTelegramWidget()
+}
+
+/** 断网：若 widget 正加载中，立即降级提示，不必干等 12s 看门狗 */
+function handleTelegramNetOffline() {
+  if (telegramWidgetLoading.value && !telegramReady.value) {
+    failTelegramLoad('当前网络不可用，暂时无法连接 Telegram 登录服务。恢复网络后将自动重试。')
   }
 }
 
+onMounted(() => {
+  window.addEventListener('online', handleTelegramNetOnline)
+  window.addEventListener('offline', handleTelegramNetOffline)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('online', handleTelegramNetOnline)
+  window.removeEventListener('offline', handleTelegramNetOffline)
+  clearTelegramLoadTimer()
+})
+
 // 弹窗打开时初始化 widget（每次打开重建，iframe 在关闭时已被 v-if 销毁）
-// immediate：应用冷启动即带 sessionStorage 标记回站时，AuthModal 挂载时弹窗可能已为开（resumeAfterTgLogout 置 true），
+// immediate：防止「挂载时弹窗已为开」的漏初始化（如父组件在 AuthModal 挂载前就置 true 了 showAuthModal），
 // 此刻不会再有 false→true 的变化触发 watch，需在挂载时按当前值初始化
 watch(showAuthModal, (open) => {
   if (open) nextTick(initTelegramWidget)
