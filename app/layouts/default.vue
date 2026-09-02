@@ -1,4 +1,12 @@
 <template>
+  <!-- Session 恢复中的全局 Loading -->
+  <div v-if="isRestoring" class="fixed inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center">
+    <div class="flex flex-col items-center gap-3">
+      <div class="animate-spin h-8 w-8 border-3 border-blue-500 border-t-transparent rounded-full" />
+      <p class="text-sm text-gray-600">恢复会话中...</p>
+    </div>
+  </div>
+
   <!-- 外层不再盖 bg-white，透出 body 的全景背景图（含遮罩）。
        导航栏独立于内容区外全宽 sticky，内容区自持 padding 对齐 -->
   <div class="min-h-screen text-zinc-800 font-sans">
@@ -91,7 +99,7 @@ const route = useRoute()
 const router = useRouter()
 
 const { categories } = useCategories()
-const { restoreSession, isLoggedIn } = useAuth()
+const { restoreSession, isLoggedIn, isRestoring } = useAuth()
 const { getHotPosts } = usePosts()
 const { getLatestUsers } = useUserProfile()
 const { adverts } = useAdverts()
@@ -209,12 +217,13 @@ if (import.meta.client) {
 watch(isLoggedIn, (loggedIn) => {
   if (loggedIn && import.meta.client) {
     // 延迟执行，确保 DOM 已完全渲染且引导标记元素已挂载
+    // 延迟从 500ms 增加到 2000ms，给用户足够时间适应登录后的界面
     nextTick(() => {
       setTimeout(() => {
         if (!isCompleted('welcome')) {
           startWelcomeTour()
         }
-      }, 500)
+      }, 2000)
     })
   }
 })
@@ -224,7 +233,7 @@ onMounted(() => {
   if (isLoggedIn.value && !isCompleted('welcome')) {
     setTimeout(() => {
       startWelcomeTour()
-    }, 1000)
+    }, 2000)
   }
 })
 

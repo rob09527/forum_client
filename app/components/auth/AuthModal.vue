@@ -228,8 +228,30 @@
             </div>
 
             <!-- Telegram Login Widget 容器（脚本加载后在此渲染官方登录按钮） -->
-            <div ref="telegramContainer" class="w-full flex justify-center" />
-            <p v-if="telegramError" class="text-xs text-red-600 text-center">{{ telegramError }}</p>
+            <div v-if="!widgetReady" class="w-full flex justify-center py-4">
+              <div class="flex items-center gap-2 text-gray-500">
+                <div class="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full" />
+                <span class="text-sm">加载 Telegram 登录...</span>
+              </div>
+            </div>
+            <div v-show="widgetReady" ref="telegramContainer" class="w-full flex justify-center" />
+
+            <!-- 切换账号提示（仅在 Widget 已加载时显示） -->
+            <div v-if="widgetReady" class="mt-2 text-center">
+              <button
+                type="button"
+                class="text-xs text-gray-500 hover:text-gray-700 underline transition-colors"
+                @click="handleSwitchTelegramAccount"
+              >
+                使用其他 Telegram 账号登录
+              </button>
+            </div>
+
+            <!-- Telegram 错误提示（增强样式） -->
+            <div v-if="telegramError" class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p class="text-sm text-red-600">{{ telegramError }}</p>
+              <p class="text-xs text-red-500 mt-1">如果问题持续出现，请尝试清除浏览器缓存</p>
+            </div>
           </div>
         </div>
       </div>
@@ -248,6 +270,8 @@ const {
   telegramLogin,
   isLoading,
   closeModal,
+  resetTelegramWidget,
+  switchTelegramAccount,
 } = useAuth()
 
 // ── 登录表单 ──
@@ -340,10 +364,15 @@ async function handleRegister() {
 // ── Telegram Login Widget ──
 const telegramContainer = ref<HTMLElement | null>(null)
 const telegramError = ref('')
+const widgetLoaded = ref(false)
+const widgetReady = ref(false)
 const { telegramBotUsername } = useRuntimeConfig().public
 
 function loadTelegramWidget() {
-  if (import.meta.server) return
+  if (import.meta.server || !telegramContainer.value || widgetLoaded.value) return
+
+  widgetLoaded.value = true // 标记开始加载，防止重复
+
   // 全局回调：Telegram widget 授权后把 user 对象回传（data-onauth 调用 window.onTelegramAuth）
   ;(window as any).onTelegramAuth = (user: TelegramAuthInput) => handleTelegramAuth(user)
 
@@ -351,21 +380,57 @@ function loadTelegramWidget() {
   script.async = true
   script.src = 'https://telegram.org/js/telegram-widget.js?22'
   script.setAttribute('data-telegram-login', telegramBotUsername)
-  script.setAttribute('data-size', 'large')
+
+  // 响应式尺寸：移动端使用 medium，桌面端使用 large
+  const isMobile = window.innerWidth < 640
+  script.setAttribute('data-size', isMobile ? 'medium' : 'large')
+
   script.setAttribute('data-userpic', 'false')
   script.setAttribute('data-onauth', 'onTelegramAuth(user)')
-  telegramContainer.value?.appendChild(script)
+
+  // 脚本加载完成后标记为 ready
+  script.onload = () => {
+    widgetReady.value = true
+  }
+
+  telegramContainer.value.appendChild(script)
 }
 
 async function handleTelegramAuth(user: TelegramAuthInput) {
   telegramError.value = ''
-  const err = await telegramLogin(user)
-  if (err) telegramError.value = err
+  const result = await telegramLogin(user)
+
+  if (result.error) {
+    telegramError.value = result.error
+  } else {
+    // 成功后强制等待 Vue 响应式更新完成（修复手机端弹窗不关闭问题）
+    await nextTick()
+
+    // 确保弹窗关闭（showAuthModal 已在 telegramLogin 中设为 false，这里再次确保）
+    showAuthModal.value = false
+
+    if (result.isNewUser) {
+      // 新用户欢迎提示（延迟 300ms，确保弹窗关闭动画完成）
+      setTimeout(() => {
+        // TODO: 使用 toast 通知
+        console.log('🎉 欢迎加入 AI Base！')
+      }, 300)
+    }
+  }
 }
 
-// 弹窗打开时加载 widget
+/** 用户主动切换 Telegram 账号 */
+function handleSwitchTelegramAccount() {
+  switchTelegramAccount()
+  // 提示用户操作成功
+  console.log('已清除 Telegram 登录信息，请重新授权')
+}
+
+// 弹窗打开时加载 widget（只加载一次）
 watch(showAuthModal, (open) => {
-  if (open) nextTick(loadTelegramWidget)
+  if (open && !widgetLoaded.value) {
+    nextTick(loadTelegramWidget)
+  }
 })
 
 // 弹窗打开时聚焦
@@ -375,6 +440,18 @@ watch(showAuthModal, (open) => {
       if (tab.value === 'login') loginEmailRef.value?.focus()
       else registerUsernameRef.value?.focus()
     })
+  }
+})
+
+// 监听退出登录后的 Widget 重置信号
+watch(resetTelegramWidget, (shouldReset) => {
+  if (shouldReset) {
+    widgetLoaded.value = false
+    widgetReady.value = false
+    if (telegramContainer.value) {
+      telegramContainer.value.innerHTML = ''
+    }
+    resetTelegramWidget.value = false // 重置标志
   }
 })
 </script>

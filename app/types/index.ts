@@ -225,6 +225,8 @@ export interface TelegramAuthInput {
 export interface AuthResult {
   user: User
   token: string
+  /** 是否为新注册用户（仅 Telegram 登录返回） */
+  isNewUser?: boolean
 }
 
 // ── 积分 / 签到 / 等级 ──

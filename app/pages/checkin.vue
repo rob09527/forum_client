@@ -305,13 +305,16 @@ if (import.meta.client) {
   loadMonth(viewMonth.value)
 }
 
-// 首次访问签到页引导
+// 首次访问签到页引导 - 改为被动触发：用户停留 3 秒未点击签到时提示
 onMounted(() => {
-  if (isLoggedIn.value && !isCompleted('first-checkin')) {
-    // 延迟确保页面已完全渲染
+  if (isLoggedIn.value && !isCompleted('first-checkin') && !status.value.checkedToday) {
+    // 延迟 3 秒，如果用户还没签到，则触发引导
     setTimeout(() => {
-      startFirstCheckinTour()
-    }, 800)
+      // 再次检查用户是否已经签到（可能在等待期间完成了签到）
+      if (!status.value.checkedToday && !isCompleted('first-checkin')) {
+        startFirstCheckinTour()
+      }
+    }, 3000)
   }
 })
 </script>

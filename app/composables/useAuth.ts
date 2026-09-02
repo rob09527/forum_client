@@ -8,6 +8,8 @@ export function useAuth() {
   const authUser = useState<User | null>('auth-user', () => null)
   const showAuthModal = useState<boolean>('auth-modal', () => false)
   const authModalTab = useState<'login' | 'register'>('auth-modal-tab', () => 'login')
+  /** 重置 Telegram Widget 标志（退出登录时触发） */
+  const resetTelegramWidget = useState<boolean>('reset-tg-widget', () => false)
 
   const isLoggedIn = computed(() => authUser.value !== null)
   const isLoading = ref(false)
@@ -77,7 +79,7 @@ export function useAuth() {
   }
 
   /** Telegram 登录/注册（合一），验签在后端完成 */
-  async function telegramLogin(data: TelegramAuthInput): Promise<string | null> {
+  async function telegramLogin(data: TelegramAuthInput): Promise<{ error: string | null; isNewUser?: boolean }> {
     isLoading.value = true
     try {
       const res = await $fetch<ApiResponse<AuthResult>>(
@@ -87,11 +89,11 @@ export function useAuth() {
       if (res.success) {
         authUser.value = res.data.user
         showAuthModal.value = false
-        return null
+        return { error: null, isNewUser: res.data.isNewUser }
       }
-      return '登录失败，请重试'
+      return { error: '登录失败，请重试' }
     } catch (err: any) {
-      return extractErrorMessage(err)
+      return { error: extractErrorMessage(err) }
     } finally {
       isLoading.value = false
     }
@@ -105,6 +107,13 @@ export function useAuth() {
       // 即使服务端退出失败，也清除本地状态
     }
     authUser.value = null
+    // 注意：不自动重置 Telegram Widget，用户下次登录会自动使用同一个 TG 账号
+    // 只有用户主动点击"切换账号"时才重置
+  }
+
+  /** 切换 Telegram 账号（用户主动触发） */
+  function switchTelegramAccount(): void {
+    resetTelegramWidget.value = true
   }
 
   /** 打开登录弹窗 */
@@ -138,6 +147,7 @@ export function useAuth() {
     isRestoring,
     showAuthModal,
     authModalTab,
+    resetTelegramWidget,
     login,
     register,
     telegramLogin,
@@ -147,5 +157,6 @@ export function useAuth() {
     openRegister,
     closeModal,
     updateUser,
+    switchTelegramAccount,
   }
 }

@@ -13,10 +13,17 @@ const STORAGE_KEY = 'forum_onboarding_completed'
 
 /**
  * 检测设备类型
+ * 结合屏幕宽度和触摸能力判断，更准确识别平板等边缘设备
  */
 function isMobile(): boolean {
   if (import.meta.server) return false
-  return window.innerWidth < 1024 // lg breakpoint
+
+  const width = window.innerWidth
+  const hasTouch = 'maxTouchPoints' in navigator && navigator.maxTouchPoints > 0
+
+  // 小于 1024px 认为是移动端
+  // 或者 1024-1280px 之间但是触摸设备（平板）
+  return width < 1024 || (width < 1280 && hasTouch)
 }
 
 /**
@@ -82,10 +89,10 @@ export function useOnboarding() {
     const defaultConfig: Config = {
       showProgress: true,
       showButtons: ['next', 'previous', 'close'],
-      nextBtnText: '下一步',
-      prevBtnText: '上一步',
-      doneBtnText: '完成',
-      progressText: '{{current}} / {{total}}',
+      nextBtnText: '下一步 →',
+      prevBtnText: '← 上一步',
+      doneBtnText: '完成 ✓',
+      progressText: '第 {{current}} 步，共 {{total}} 步',
       animate: true,
       smoothScroll: true,
       disableActiveInteraction: false,
@@ -93,6 +100,27 @@ export function useOnboarding() {
       stagePadding: 10,
       stageRadius: 10,
       popoverClass: 'onboarding-popover',
+      // 不使用遮罩层，更轻量友好
+      showOverlay: false,
+      onPopoverRender: (popover, { config: driverConfig, state }) => {
+        // 添加跳过按钮
+        const footer = popover.wrapper.querySelector('.driver-popover-footer')
+        if (footer && !footer.querySelector('.driver-popover-skip-btn')) {
+          const skipBtn = document.createElement('button')
+          skipBtn.className = 'driver-popover-skip-btn'
+          skipBtn.textContent = '跳过引导'
+          skipBtn.style.cssText = 'margin-right: auto; padding: 5px 10px; color: #71717a; font-size: 13px; background: transparent; border: none; cursor: pointer; transition: color 0.2s;'
+          skipBtn.onmouseover = () => { skipBtn.style.color = '#18181b' }
+          skipBtn.onmouseout = () => { skipBtn.style.color = '#71717a' }
+          skipBtn.onclick = () => {
+            const shouldSkip = confirm('确定跳过新手引导吗？\n\n你可以稍后在个人设置中重新查看引导。')
+            if (shouldSkip && driverInstance.value) {
+              driverInstance.value.destroy()
+            }
+          }
+          footer.prepend(skipBtn)
+        }
+      },
       ...config,
     }
 
@@ -135,218 +163,127 @@ export function useOnboarding() {
   }
 
   /**
-   * 桌面端欢迎引导（更详细，展示顶部导航和功能）
+   * 桌面端欢迎引导（单页版本，在首页完成所有引导）
    */
   function startWelcomeTourDesktop() {
-    const welcomeStep: DriveStep = {
-      popover: {
-        title: '欢迎来到 AI Base 论坛 🎉',
-        description: '这是一个专注于 AI 技术交流的社区。接下来，我将带你快速了解核心功能。点击"下一步"开始！',
-        side: 'bottom',
-        align: 'center',
-      },
-    }
-
-    const driverObj = createDriver({
-      onDestroyed: (element, step, opts) => {
-        markAsCompleted('welcome')
-        const goToCheckin = confirm('引导完成！是否前往签到页领取新手积分？')
-        if (goToCheckin) {
-          navigateTo('/checkin')
-        }
-      },
-      onNextClick: (element, step, opts) => {
-        const currentIndex = opts.index ?? 0
-
-        if (currentIndex === 0) {
-          // 跳转到签到页
-          driverObj.destroy()
-          navigateTo('/checkin')
-          setTimeout(() => {
-            startWelcomeTourDesktopStep2()
-          }, 1000)
-        } else {
-          driverObj.moveNext()
-        }
-      },
-    })
-
-    driverObj.setSteps([welcomeStep])
-    driverObj.drive(0)
-    driverInstance.value = driverObj
-  }
-
-  /**
-   * 桌面端 - 第2步：签到页
-   */
-  function startWelcomeTourDesktopStep2() {
     const steps: DriveStep[] = [
       {
-        element: '[data-onboarding="checkin-button"]',
+        element: 'header',
         popover: {
-          title: '每日签到 📅',
-          description: '每天签到可获得积分奖励(鸡腿🍗)。连续签到还有额外加成！',
+          title: '欢迎来到 AI Base 论坛 🎉',
+          description: '这里是 AI 技术爱好者的交流社区\n\n• 1000+ 活跃用户分享经验\n• 每天都有新鲜的技术讨论\n• 签到/发帖获得积分，兑换专属装扮\n\n让我们用 30 秒带你快速上手！',
           side: 'bottom',
+          align: 'start',
+        },
+      },
+      {
+        element: 'aside:first-of-type',
+        popover: {
+          title: '内容分类 📚',
+          description: '左侧是板块分类，点击找到你感兴趣的主题，精准浏览相关内容。',
+          side: 'right',
+          align: 'start',
+        },
+      },
+      {
+        element: 'main',
+        popover: {
+          title: '内容区域 📝',
+          description: '这里展示最新和最热的帖子。点击标题查看详情，可以点赞、评论和打赏优质内容。',
+          side: 'left',
+          align: 'start',
+        },
+      },
+      {
+        element: 'aside:last-of-type',
+        popover: {
+          title: '发现更多 🔥',
+          description: '右侧边栏展示热门帖子和最新用户，帮助你快速发现感兴趣的内容。',
+          side: 'left',
+          align: 'start',
+        },
+      },
+      {
+        popover: {
+          title: '积分系统 🍗',
+          description: '• 每日签到：获得 5-20 鸡腿\n• 发帖/评论：内容越优质奖励越多\n• 积分用途：购买装扮、打赏作者、发悬赏帖\n\n连续签到还有额外加成！',
+          side: 'top',
           align: 'center',
         },
       },
       {
         popover: {
-          title: '积分用途 🍗',
-          description: '积分可用于购买装扮、称号、头像框，打赏优质内容，发布悬赏帖等。现在去看看商店吧！',
+          title: '开始你的旅程 🚀',
+          description: '你已经掌握了基本操作！现在可以：\n\n📅 去签到领取新手积分\n🔥 浏览热门帖子\n✍️ 发布你的第一篇帖子',
+          side: 'top',
+          align: 'center',
         },
       },
     ]
 
     const driverObj = createDriver({
+      onDestroyed: (element, step, opts) => {
+        markAsCompleted('welcome')
+      },
       onNextClick: (element, step, opts) => {
         const currentIndex = opts.index ?? 0
-        if (currentIndex === 1) {
-          // 跳转到商店
+
+        // 最后一步：提供行动选项
+        if (currentIndex === 5) {
           driverObj.destroy()
-          navigateTo('/shop')
-          setTimeout(() => {
-            startWelcomeTourDesktopStep3()
-          }, 1000)
+
+          // 使用更友好的方式提示用户
+          const action = confirm('🎉 新手引导完成！\n\n点击"确定"前往签到领积分\n点击"取消"继续浏览')
+          if (action) {
+            navigateTo('/checkin')
+          }
         } else {
           driverObj.moveNext()
         }
-      },
-      onCloseClick: () => {
-        markAsCompleted('welcome')
       },
     })
 
     driverObj.setSteps(steps)
     driverObj.drive(0)
+    driverInstance.value = driverObj
   }
 
   /**
-   * 桌面端 - 第3步：商店页
-   */
-  function startWelcomeTourDesktopStep3() {
-    const step: DriveStep = {
-      popover: {
-        title: '积分商城 🛍️',
-        description: '这里可以用积分购买各种装扮：昵称颜色、称号、头像框等，让你的个人主页与众不同。现在去发布第一篇帖子吧！',
-        side: 'top',
-        align: 'center',
-      },
-    }
-
-    const driverObj = createDriver({
-      onNextClick: (element, step, opts) => {
-        driverObj.destroy()
-        navigateTo('/post/new')
-        setTimeout(() => {
-          startWelcomeTourDesktopStep4()
-        }, 1000)
-      },
-      onCloseClick: () => {
-        markAsCompleted('welcome')
-      },
-    })
-
-    driverObj.setSteps([step])
-    driverObj.drive(0)
-  }
-
-  /**
-   * 桌面端 - 第4步：发帖页
-   */
-  function startWelcomeTourDesktopStep4() {
-    const step: DriveStep = {
-      element: '[data-onboarding="post-title"]',
-      popover: {
-        title: '发布内容 ✍️',
-        description: '分享你的想法、提问或经验。发帖可获得积分奖励！支持 Markdown 格式，可以插入代码、图片等。',
-        side: 'bottom',
-        align: 'start',
-      },
-    }
-
-    const driverObj = createDriver({
-      onDestroyed: (element, step, opts) => {
-        markAsCompleted('welcome')
-        const goBack = confirm('引导完成！现在你可以开始探索论坛了。是否返回首页？')
-        if (goBack) {
-          navigateTo('/')
-        }
-      },
-    })
-
-    driverObj.setSteps([step])
-    driverObj.drive(0)
-  }
-
-  /**
-   * 移动端欢迎引导（简化流程，聚焦底部导航）
+   * 移动端欢迎引导（简化为 4 步，聚焦核心价值）
    */
   function startWelcomeTourMobile() {
     const steps: DriveStep[] = [
       {
         popover: {
           title: '欢迎来到 AI Base 论坛 🎉',
-          description: '这是一个专注于 AI 技术交流的社区。让我带你快速了解核心功能！',
+          description: '这里是 AI 技术爱好者的交流社区\n\n• 每天都有新鲜的技术讨论\n• 签到/发帖获得积分奖励\n• 用积分兑换专属装扮\n\n让我们用 20 秒带你快速上手！',
           side: 'top',
           align: 'center',
         },
       },
       {
-        element: '[data-onboarding="nav-home"]',
+        element: 'nav[aria-label="移动端主导航"]',
         popover: {
-          title: '首页',
-          description: '浏览最新、最热的帖子，发现感兴趣的内容。',
-          side: 'top',
-          align: 'start',
-        },
-      },
-      {
-        element: '[data-onboarding="nav-categories"]',
-        popover: {
-          title: '分类',
-          description: '按照主题分类浏览内容，找到你感兴趣的板块。',
-          side: 'top',
-          align: 'start',
-        },
-      },
-      {
-        element: '[data-onboarding="nav-post"]',
-        popover: {
-          title: '发帖',
-          description: '分享你的想法、问题或经验。发帖可获得积分奖励！',
+          title: '底部导航 📱',
+          description: '首页浏览内容、发帖分享想法、商店兑换装扮、个人中心查看资料。所有核心功能都在这里！',
           side: 'top',
           align: 'center',
         },
       },
       {
-        element: '[data-onboarding="nav-shop"]',
         popover: {
-          title: '商店',
-          description: '用积分购买装扮：昵称颜色、称号、头像框等。',
+          title: '积分系统 🍗',
+          description: '• 每日签到：获得 5-20 鸡腿\n• 发帖/评论：内容越优质奖励越多\n• 积分用途：购买装扮、打赏作者、发悬赏帖\n\n连续签到还有额外加成哦！',
           side: 'top',
-          align: 'start',
+          align: 'center',
         },
       },
       {
-        element: '[data-onboarding="nav-user"]',
         popover: {
-          title: '个人中心',
-          description: '查看你的帖子、积分、装扮和设置。',
+          title: '开始探索吧 🚀',
+          description: '你已经掌握了基本操作！现在可以：\n\n📅 去签到领取新手积分\n🔥 浏览热门帖子\n✍️ 发布你的第一篇帖子',
           side: 'top',
-          align: 'end',
-        },
-      },
-      {
-        popover: {
-          title: '每日签到 📅',
-          description: '记得每天签到领取积分！通过签到、发帖、评论可以获得鸡腿🍗，用于购买装扮和打赏他人。',
-        },
-      },
-      {
-        popover: {
-          title: '开始你的旅程 🚀',
-          description: '现在你可以开始探索了！点击"签到"按钮去领取新手积分吧！',
+          align: 'center',
         },
       },
     ]
@@ -354,9 +291,21 @@ export function useOnboarding() {
     const driverObj = createDriver({
       onDestroyed: (element, step, opts) => {
         markAsCompleted('welcome')
-        const goToCheckin = confirm('是否前往签到页领取新手积分？')
-        if (goToCheckin) {
-          navigateTo('/checkin')
+      },
+      onNextClick: (element, step, opts) => {
+        const currentIndex = opts.index ?? 0
+
+        // 最后一步：提供行动选项
+        if (currentIndex === 3) {
+          driverObj.destroy()
+
+          // 使用更友好的方式提示用户
+          const action = confirm('🎉 新手引导完成！\n\n点击"确定"前往签到领积分\n点击"取消"继续浏览')
+          if (action) {
+            navigateTo('/checkin')
+          }
+        } else {
+          driverObj.moveNext()
         }
       },
     })
