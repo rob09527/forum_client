@@ -42,6 +42,8 @@ export function usePosts() {
   const total = ref(0)
   const totalPages = ref(0)
   const loading = ref(false)
+  /** 无限滚动「追加下一页」时的加载态，独立于 loading，避免整列表闪回「加载中」 */
+  const loadingMore = ref(false)
   const error = ref('')
 
   /**
@@ -66,6 +68,29 @@ export function usePosts() {
       return null
     } finally {
       loading.value = false
+    }
+  }
+
+  /**
+   * 追加下一页（无限滚动用）：把结果拼到 posts 末尾而非替换。
+   * 与 loadPosts 的区别：不置 loading（避免触底时整列表闪回「加载中」）、
+   * 失败也不写 error（保留已加载内容，底部手动分页作为兜底），仅返回 null 让调用方不推进页码。
+   */
+  async function loadMorePosts(query: PostListQuery = {}): Promise<Paginated<PostListItem> | null> {
+    loadingMore.value = true
+    try {
+      const res = await $fetch<ApiResponse<Paginated<PostListItem>>>(
+        `${apiBase.value}/api/posts`,
+        { query }
+      )
+      posts.value = [...posts.value, ...res.data.items]
+      total.value = res.data.total
+      totalPages.value = res.data.totalPages
+      return res.data
+    } catch {
+      return null
+    } finally {
+      loadingMore.value = false
     }
   }
 
@@ -131,8 +156,10 @@ export function usePosts() {
     total,
     totalPages,
     loading,
+    loadingMore,
     error,
     loadPosts,
+    loadMorePosts,
     getPost,
     createPost,
     updatePost,

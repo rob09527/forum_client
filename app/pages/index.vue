@@ -27,23 +27,26 @@
       <PostList
         :posts="posts"
         :total-pages="totalPages"
-        :loading="pending"
+        :current-page="page"
+        :loading="loading"
+        :loading-more="loadingMore"
         :error="errorMessage"
         @sort-change="handleSortChange"
         @page-change="handlePageChange"
+        @load-more="handleLoadMore"
       />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { usePosts } from '~/composables/usePosts'
+import { usePosts, type PostListQuery } from '~/composables/usePosts'
 import { useCategories } from '~/composables/useCategories'
 
 const route = useRoute()
 const router = useRouter()
 
-const { posts, totalPages, error: listError, loadPosts } = usePosts()
+const { posts, totalPages, loading, loadingMore, error: listError, loadPosts, loadMorePosts } = usePosts()
 
 // 当前板块由 URL 驱动：?category=general 是真实板块「综合讨论」要正常过滤；
 // 只有不带 category 参数（undefined）才表示全部帖子。
@@ -86,18 +89,12 @@ watch([category, activeTag], () => {
   page.value = 1
 })
 
-// SSR 时也执行并等待数据返回后再序列化；参数变化自动重新拉取
-const { data, pending, error: dataError } = useAsyncData(
+// SSR 时也执行并等待数据返回后再序列化；筛选/排序变化时自动重拉第一页（replace）。
+// 注意：page 不放进 watch——手动翻页与无限滚动各自显式拉取（replace / append），避免 useAsyncData 重跑覆盖追加结果。
+const { data, error: dataError } = useAsyncData(
   'post-list',
-  () => loadPosts({
-    category: category.value,
-    tag: activeTag.value,
-    sort: sort.value,
-    bountyStatus: bountyOnly.value ? 'escrow' : undefined,
-    page: page.value,
-    pageSize,
-  }),
-  { watch: [category, activeTag, sort, bountyOnly, page] }
+  () => loadPosts(buildQuery(1)),
+  { watch: [category, activeTag, sort, bountyOnly] }
 )
 
 // 客户端 hydration 时 payload 命中 → useAsyncData 不再执行 handler，
@@ -106,6 +103,18 @@ watch(data, (v) => {
   posts.value = v?.items ?? []
   totalPages.value = v?.totalPages ?? 0
 }, { immediate: true })
+
+/** 组装列表查询参数（page 由调用方显式传入） */
+function buildQuery(p: number): PostListQuery {
+  return {
+    category: category.value,
+    tag: activeTag.value,
+    sort: sort.value,
+    bountyStatus: bountyOnly.value ? 'escrow' : undefined,
+    page: p,
+    pageSize,
+  }
+}
 
 function handleSortChange(newSort: string) {
   if (newSort === 'bounty') {
@@ -119,8 +128,18 @@ function handleSortChange(newSort: string) {
   page.value = 1
 }
 
-function handlePageChange(newPage: number) {
+/** 手动翻页：replace 指定页（走 loadPosts，整列表替换 + 显示 loading） */
+async function handlePageChange(newPage: number) {
   page.value = newPage
+  await loadPosts(buildQuery(newPage))
+}
+
+/** 无限滚动：追加下一页（走 loadMorePosts，拼接到末尾，不闪「加载中」） */
+async function handleLoadMore() {
+  if (page.value >= totalPages.value || loading.value || loadingMore.value) return
+  const next = page.value + 1
+  const ok = await loadMorePosts(buildQuery(next))
+  if (ok) page.value = next
 }
 
 const errorMessage = computed(() => dataError.value ? '加载帖子失败' : listError.value)

@@ -21,12 +21,15 @@
           </h1>
         </div>
         <PostList
-        :posts="posts"
-        :total-pages="totalPages"
-        :loading="loading"
-        :error="error"
-        @sort-change="handleSortChange"
-        @page-change="handlePageChange"
+          :posts="posts"
+          :total-pages="totalPages"
+          :current-page="page"
+          :loading="loading"
+          :loading-more="loadingMore"
+          :error="error"
+          @sort-change="handleSortChange"
+          @page-change="handlePageChange"
+          @load-more="handleLoadMore"
         />
       </div>
     </template>
@@ -37,27 +40,39 @@
 import { usePosts } from '~/composables/usePosts'
 
 const { user, isLoggedIn, openLogin } = useAuth()
-const { posts, totalPages, loading, error, loadPosts } = usePosts()
+const { posts, totalPages, loading, loadingMore, error, loadPosts, loadMorePosts } = usePosts()
 
 const sort = ref<'latest' | 'hot'>('latest')
 const page = ref(1)
 const pageSize = 20
 
-/** 拉取当前登录用户的帖子。用户 ID 只在客户端恢复后才存在，SSR 时 user 为 null 直接跳过 */
-function load() {
-  if (!user.value?.id) return
-  loadPosts({ authorId: user.value.id, sort: sort.value, page: page.value, pageSize })
+/** 组装查询参数（page 由调用方显式传入） */
+function buildQuery(p: number) {
+  return { authorId: user.value?.id, sort: sort.value, page: p, pageSize }
 }
 
-// 登录态从 null → 有值、或排序/翻页变化时重新拉取
-watch([() => user.value?.id, sort, page], load, { immediate: true })
+// 登录态从 null → 有值、或排序变化时：重置到第一页并 replace 拉取（用户 ID 只在客户端恢复后才存在，SSR 时 user 为 null 直接跳过）
+watch([() => user.value?.id, sort], () => {
+  page.value = 1
+  if (user.value?.id) loadPosts(buildQuery(1))
+}, { immediate: true })
 
 function handleSortChange(newSort: string) {
   sort.value = newSort as 'latest' | 'hot'
-  page.value = 1
+  // page 由上面的 watch 重置
 }
 
+/** 手动翻页：replace 指定页 */
 function handlePageChange(newPage: number) {
   page.value = newPage
+  loadPosts(buildQuery(newPage))
+}
+
+/** 无限滚动：追加下一页 */
+async function handleLoadMore() {
+  if (!user.value?.id || page.value >= totalPages.value || loading.value || loadingMore.value) return
+  const next = page.value + 1
+  const ok = await loadMorePosts(buildQuery(next))
+  if (ok) page.value = next
 }
 </script>
