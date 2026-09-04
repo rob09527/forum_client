@@ -2,8 +2,10 @@
  * 编辑器表情数据。
  *
  * - EMOJI_GROUPS:标准 unicode emoji,纯数据,无需任何资源,点击直接插入 emoji 字符。
- * - STICKERS:内置表情包(sticker),素材放在 client/public/stickers/,Twemoji SVG(Apache-2.0 / CC-BY-4.0)。
- *   插入时拼成 Markdown 图片 `![名称](/stickers/xxx.svg)`,与现有图片链路一致(相对路径,渲染走同源)。
+ * - STICKERS:内置表情包(sticker),素材放在 client/public/stickers/,两类来源:
+ *   - Twemoji SVG(Apache-2.0 / CC-BY-4.0),`.svg`;
+ *   - NodeLoc 收编表情包(2026-09-02,ac 系列 54 + 小黄鸡 xhj 系列 49),`.png/.gif/.jpeg` 混合。
+ *   插入时拼成 Markdown 图片 `![名称](/stickers/xxx)`,与现有图片链路一致(相对路径,渲染走同源)。
  */
 
 export interface EmojiGroup {
@@ -167,7 +169,7 @@ export const STICKERS: Sticker[] = [
   { name: 'xhj006', file: 'xhj006.png' },
   { name: 'xhj007', file: 'xhj007.jpeg' },
   { name: 'xhj008', file: 'xhj008.gif' },
-  { name: 'xhj09', file: 'xhj09.gif' },
+  { name: 'xhj009', file: 'xhj009.gif' },
   { name: 'xhj10', file: 'xhj10.gif' },
   { name: 'xhj11', file: 'xhj11.jpeg' },
   { name: 'xhj12', file: 'xhj12.gif' },

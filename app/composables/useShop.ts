@@ -62,6 +62,7 @@ export function useShop() {
   /** 拉取我的装饰（需登录；未登录时页面引导登录） */
   async function fetchMine(): Promise<void> {
     isMineLoading.value = true
+    error.value = null
     try {
       const res = await $fetch<ApiResponse<MyDecorationGroup[]>>(`${apiBase.value}/api/shop/mine`)
       mine.value = res.data

@@ -192,13 +192,14 @@ const colorItems = computed(() => items.value.filter((i) => i.type === 'username
 
 /** 称号 / 颜色 子 tab + 分页（每页 6 条 = 3 列 × 2 行）。
  * 默认 'title'：头像分区下线后若仍默认 'avatar' 会打开就是空白页。
- * ?sub= 仅接受现存分区，历史链接 ?sub=avatar 一律回落到 'title'。 */
+ * ?sub= 双向驱动：读时仅接受现存分区（历史链接 ?sub=avatar 回落到 'title'），
+ * 切子 tab 时写回 query（replace，不污染历史），支持直达链接与后退键。 */
 const PAGE_SIZE = 6
 const SUB_TAB_VALUES: ShopItemTypeValue[] = ['title', 'username_color']
-const querySub = route.query.sub as ShopItemTypeValue | undefined
-const subTab = ref<ShopItemTypeValue>(
-  querySub && SUB_TAB_VALUES.includes(querySub) ? querySub : 'title'
-)
+const subTab = computed<ShopItemTypeValue>(() => {
+  const q = route.query.sub as ShopItemTypeValue | undefined
+  return q && SUB_TAB_VALUES.includes(q) ? q : 'title'
+})
 const page = ref(0)
 const subTabs = computed(() => [
   { label: '专属称号', value: 'title' as ShopItemTypeValue, count: titleItems.value.length, icon: 'medal' },
@@ -212,9 +213,10 @@ const pagedItems = computed(() => {
 })
 function switchSubTab(v: ShopItemTypeValue) {
   if (subTab.value === v) return
-  subTab.value = v
-  page.value = 0
+  router.replace({ path: '/shop', query: { ...route.query, sub: v } })
 }
+// 子 tab 变化（含后退键触发）时重置分页，避免停留在上一分区的页码
+watch(subTab, () => { page.value = 0 })
 function prevPage() {
   if (page.value > 0) page.value--
 }
