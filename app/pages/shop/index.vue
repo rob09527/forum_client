@@ -63,19 +63,6 @@
           </button>
         </div>
 
-        <!-- 头像风格切换：一次只看一个风格的 20 个，避免 400 个头像全铺开 -->
-        <div v-if="subTab === 'avatar'" class="flex flex-wrap gap-2 px-1 lg:mt-3">
-          <button
-            v-for="s in avatarStyleDefs"
-            :key="s.id"
-            class="style-pill"
-            :class="{ on: effectiveAvatarStyle === s.id }"
-            @click="switchAvatarStyle(s.id)"
-          >
-            <AppIcon :name="s.icon" :size="14" class="shrink-0" /> {{ s.label }}
-          </button>
-        </div>
-
         <!-- 每页 6 条（3 列 × 2 行）PC端；手机端 2 列 -->
         <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
           <ShopItemCard v-for="item in pagedItems" :key="item.id" :item="item" @buy="openBuy(item)" />
@@ -177,8 +164,6 @@ import type { MyDecorationItem, ShopItem, ShopItemTypeValue } from '~/types'
 import { ShopItemTypeLabel } from '~/types'
 import { useShop } from '~/composables/useShop'
 import { useAuth } from '~/composables/useAuth'
-import { useAvatarStyles } from '~/composables/useAvatarStyles'
-import { deriveStyleDefs } from '~/utils/avatar'
 import { extractErrorMessage } from '~/composables/api'
 
 const route = useRoute()
@@ -200,48 +185,26 @@ function switchTab(tab: string) {
   router.push({ path: '/shop', query: { ...route.query, tab } })
 }
 
-/** 称号区 / 颜色区 / 头像区拆分 [2.2]：业务分区展示，互不冗杂。
- * 商城只卖付费头像（免费池头像在个人资料选择器直接选、不在商城展示），按风格 pill 切换，一次看一个风格。 */
+/** 称号区 / 颜色区拆分 [2.2]：业务分区展示，互不冗杂。
+ * 头像分区已于 §9.2 下线（头像不再是商品，预置头像在个人资料选择器直接选 + 支持自定义上传）。 */
 const titleItems = computed(() => items.value.filter((i) => i.type === 'title'))
 const colorItems = computed(() => items.value.filter((i) => i.type === 'username_color'))
-const avatarItems = computed(() => items.value.filter((i) => i.type === 'avatar' && i.price > 0))
 
-/** 头像风格 pill（中文名 + 图标）：复用后端下发的权威风格清单 + 前端中英文案映射。
- * 免费池风格在商城无商品，从 pill 列表剔除（不在商城展示）。 */
-const { data: avatarStyles } = useAvatarStyles()
-const avatarStyleDefs = computed(() =>
-  deriveStyleDefs(avatarStyles.value?.styles ?? []).filter((d) =>
-    avatarItems.value.some((i) => i.renderValue.startsWith(`/avatars/${d.id}/`)),
-  ),
-)
-/** 当前选中的头像风格；未显式选择时兜底到第一个（支持 ?sub=avatar 直达） */
-const activeAvatarStyle = ref<string>('')
-const effectiveAvatarStyle = computed(() => activeAvatarStyle.value || avatarStyleDefs.value[0]?.id || '')
-/** 选中风格下的头像列表 */
-const avatarStyleList = computed(() => {
-  if (!effectiveAvatarStyle.value) return []
-  return avatarItems.value.filter((i) => i.renderValue.startsWith(`/avatars/${effectiveAvatarStyle.value}/`))
-})
-function switchAvatarStyle(style: string) {
-  if (activeAvatarStyle.value === style) return
-  activeAvatarStyle.value = style
-  page.value = 0
-}
-
-/** 称号 / 颜色 / 头像 子 tab + 分页（每页 6 条 = 3 列 × 2 行）。
- * ?sub=avatar 直达头像分区（AvatarPicker 付费头像跳转用）。 */
+/** 称号 / 颜色 子 tab + 分页（每页 6 条 = 3 列 × 2 行）。
+ * 默认 'title'：头像分区下线后若仍默认 'avatar' 会打开就是空白页。
+ * ?sub= 仅接受现存分区，历史链接 ?sub=avatar 一律回落到 'title'。 */
 const PAGE_SIZE = 6
-const subTab = ref<ShopItemTypeValue>((route.query.sub as ShopItemTypeValue) || 'avatar')
+const SUB_TAB_VALUES: ShopItemTypeValue[] = ['title', 'username_color']
+const querySub = route.query.sub as ShopItemTypeValue | undefined
+const subTab = ref<ShopItemTypeValue>(
+  querySub && SUB_TAB_VALUES.includes(querySub) ? querySub : 'title'
+)
 const page = ref(0)
 const subTabs = computed(() => [
-  { label: '头像', value: 'avatar' as ShopItemTypeValue, count: avatarItems.value.length, icon: 'user' },
   { label: '专属称号', value: 'title' as ShopItemTypeValue, count: titleItems.value.length, icon: 'medal' },
   { label: '用户名颜色', value: 'username_color' as ShopItemTypeValue, count: colorItems.value.length, icon: 'palette' },
 ])
-const currentList = computed(() =>
-  subTab.value === 'title' ? titleItems.value
-    : subTab.value === 'avatar' ? avatarStyleList.value
-    : colorItems.value)
+const currentList = computed(() => (subTab.value === 'title' ? titleItems.value : colorItems.value))
 const totalPages = computed(() => Math.max(1, Math.ceil(currentList.value.length / PAGE_SIZE)))
 const pagedItems = computed(() => {
   const p = Math.min(page.value, totalPages.value - 1)
@@ -251,10 +214,6 @@ function switchSubTab(v: ShopItemTypeValue) {
   if (subTab.value === v) return
   subTab.value = v
   page.value = 0
-  // 进入头像分区时默认选中第一个风格（length 已保证 [0] 存在）
-  if (v === 'avatar' && !activeAvatarStyle.value && avatarStyleDefs.value.length) {
-    activeAvatarStyle.value = avatarStyleDefs.value[0]!.id
-  }
 }
 function prevPage() {
   if (page.value > 0) page.value--
@@ -263,19 +222,15 @@ function nextPage() {
   if (page.value < totalPages.value - 1) page.value++
 }
 
-/** 「我的」tab：称号/颜色/头像切换（同商城分区，不做下拉铺满） */
+/** 「我的」tab：称号/颜色切换（同商城分区，不做下拉铺满）。
+ * 头像分区随 §9.2 一并下线：头像不再产生持有记录（user_decorations 无 avatar 行）。 */
 const mineSubTab = ref<ShopItemTypeValue>('title')
 const titleGroup = computed(() => mine.value.find((g) => g.type === 'title'))
 const colorGroup = computed(() => mine.value.find((g) => g.type === 'username_color'))
-const avatarGroup = computed(() => mine.value.find((g) => g.type === 'avatar'))
-const mineActiveGroup = computed(() =>
-  mineSubTab.value === 'title' ? titleGroup.value
-    : mineSubTab.value === 'avatar' ? avatarGroup.value
-    : colorGroup.value)
+const mineActiveGroup = computed(() => (mineSubTab.value === 'title' ? titleGroup.value : colorGroup.value))
 const mineSubTabs = computed(() => [
   { label: '专属称号', value: 'title' as ShopItemTypeValue, count: titleGroup.value?.items.length ?? 0, icon: 'medal' },
   { label: '用户名颜色', value: 'username_color' as ShopItemTypeValue, count: colorGroup.value?.items.length ?? 0, icon: 'palette' },
-  { label: '头像', value: 'avatar' as ShopItemTypeValue, count: avatarGroup.value?.items.length ?? 0, icon: 'user' },
 ])
 const mineSubLabel = computed(() => ShopItemTypeLabel[mineSubTab.value])
 function switchMineSubTab(v: ShopItemTypeValue) {
@@ -344,33 +299,3 @@ watch(activeTab, (tab) => {
   if (tab === 'mine' && isLoggedIn.value) fetchMine()
 })
 </script>
-
-<style scoped>
-/* 头像风格切换 pill（与后台商品目录同款）。
-   颜色直接取项目主题 blue/zinc 色值（main.css --color-primary=#3b82f6），
-   不依赖 Nuxt UI 的 --ui-color-* 变量——该项目未注入这些变量，
-   background 失效会回退白底 + color:#fff → 选中态白底白字不可见（bug 修复）。 */
-.style-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 12px;
-  border-radius: 16px;
-  border: 1px solid #e4e4e7; /* zinc-200 */
-  background: #fff;
-  font-size: 12px;
-  color: #52525b; /* zinc-600 */
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.style-pill:hover {
-  border-color: #3b82f6; /* blue-500 */
-  color: #3b82f6;
-}
-.style-pill.on {
-  background: #3b82f6; /* blue-500 */
-  border-color: #3b82f6;
-  color: #fff;
-  font-weight: 600;
-}
-</style>

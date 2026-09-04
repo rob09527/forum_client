@@ -1,8 +1,7 @@
 <template>
   <div>
     <p class="text-sm text-zinc-600 mb-3">
-      选择本地头像（{{ styles.length }} 个风格 × {{ perStyle }} 个）
-      <span class="inline-flex items-center gap-0.5 text-xs text-zinc-400">· <AppIcon name="lock" :size="11" /> 为付费头像，点击前往商城解锁</span>
+      选择本地头像（{{ styles.length }} 个风格 × {{ perStyle }} 个），也可以上传自己的图片
     </p>
 
     <!-- 风格分类：点击展开该风格的 20 个头像 -->
@@ -23,7 +22,7 @@
       </button>
     </div>
 
-    <!-- 当前风格的 20 个头像：免费可点选，付费 🔒 角标 + 价格、点击去商城 -->
+    <!-- 当前风格的预置头像：全部直接可点选（§9.2 已下线头像商城，无锁、无价格） -->
     <div v-if="expandedStyle" class="grid grid-cols-4 sm:grid-cols-8 gap-1.5 max-h-[320px] overflow-y-auto">
       <button
         v-for="n in perStyle"
@@ -32,7 +31,7 @@
         :class="isSelected(expandedStyle, n)
           ? 'border-blue-500 bg-blue-500/10'
           : 'border-zinc-200 bg-white hover:border-zinc-200'"
-        @click="onAvatarClick(expandedStyle, n)"
+        @click="emit('select', localAvatarPath(expandedStyle, n))"
       >
         <img
           :src="localAvatarPath(expandedStyle, n)"
@@ -40,19 +39,58 @@
           class="w-full h-full rounded-md"
           loading="lazy"
         />
-        <span
-          v-if="isLocked(expandedStyle, n)"
-          class="absolute inset-x-0 bottom-0 rounded-b-md bg-black/60 text-white text-[10px] py-0.5 flex items-center justify-center gap-0.5"
-        >
-          <AppIcon name="lock" :size="10" /> {{ priceOf(expandedStyle, n) }}
-        </span>
-        <span
-          v-else-if="isPaid(expandedStyle, n)"
-          class="absolute inset-x-0 bottom-0 rounded-b-md bg-emerald-600/80 text-white text-[10px] py-0.5 flex items-center justify-center gap-0.5"
-        >
-          <AppIcon name="check" :size="10" /> 已拥有
-        </span>
       </button>
+    </div>
+
+    <!-- ── 自定义上传（§9.2）：浏览器 API 只在事件回调内触碰，SSR 安全 ── -->
+    <div class="mt-4 pt-4 border-t border-zinc-200">
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <span class="text-sm text-zinc-700">上传自定义头像</span>
+        <span class="text-[11px] text-zinc-500">JPG/PNG/WebP/GIF，≤{{ maxSizeMb }}MB，超出会被压缩</span>
+      </div>
+
+      <input
+        ref="fileInput"
+        type="file"
+        :accept="acceptAttr"
+        class="hidden"
+        @change="onFileChange"
+      />
+
+      <div class="flex items-center gap-3">
+        <!-- 预览（选择中/上传中/成功后都展示当前待用图） -->
+        <div class="w-16 h-16 rounded-full overflow-hidden bg-zinc-100 border border-zinc-200 flex items-center justify-center flex-shrink-0">
+          <img v-if="preview" :src="preview" alt="待上传头像预览" class="w-full h-full object-cover" />
+          <AppIcon v-else name="user" :size="20" class="text-zinc-400" />
+        </div>
+
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              class="btn btn-ghost px-3 py-1.5 text-sm"
+              :disabled="isUploading"
+              @click="pickFile"
+            >
+              {{ pickedFile ? '重新选择' : '选择图片' }}
+            </button>
+            <button
+              v-if="pickedFile"
+              class="btn btn-primary px-3 py-1.5 text-sm"
+              :disabled="isUploading"
+              @click="doUpload"
+            >
+              {{ isUploading ? '上传中…' : uploadError ? '重试上传' : '确认上传' }}
+            </button>
+          </div>
+
+          <!-- 四态提示：Loading / Error（可重试）/ Success / Empty -->
+          <p v-if="isUploading" class="text-xs text-zinc-500 mt-1.5">正在上传并压缩，请稍候…</p>
+          <p v-else-if="uploadError" class="text-xs text-red-600 mt-1.5 break-words">{{ uploadError }}</p>
+          <p v-else-if="uploadedAvatar" class="text-xs text-emerald-600 mt-1.5">头像已更新 ✓</p>
+          <p v-else-if="pickedFile" class="text-xs text-zinc-500 mt-1.5 truncate">已选择「{{ pickedFile.name }}」，点「确认上传」生效</p>
+          <p v-else class="text-xs text-zinc-500 mt-1.5">还没有选择图片</p>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -60,54 +98,24 @@
 <script setup lang="ts">
 import { deriveStyleDefs, localAvatarPath } from '~/utils/avatar'
 import { useAvatarStyles } from '~/composables/useAvatarStyles'
-import { useShop } from '~/composables/useShop'
+import { AVATAR_ACCEPT_ATTR, AVATAR_MAX_SIZE, useAvatarUpload } from '~/composables/useAvatarUpload'
 
 const props = defineProps<{
-  /** 当前头像路径（/avatars/...），用于高亮已选中的头像 */
+  /** 当前头像路径（/avatars/... 或 /uploads/...），用于高亮已选中的头像 */
   currentAvatar?: string
 }>()
 
 const emit = defineEmits<{
-  /** 选中某个免费本地头像，传出完整路径 */
+  /** 选中某个预置本地头像，传出完整路径（落库由父级负责） */
   select: [avatar: string]
+  /** 自定义头像上传成功且已落库，传出服务端最终认定的头像路径 */
+  uploaded: [avatar: string]
 }>()
-
-const toast = useToast()
 
 // 权威风格清单与每风格数量由后端下发；未就绪时为空数组，列表暂不渲染（不会闪错头像）
 const { data: avatarStyles } = useAvatarStyles()
 const styles = computed(() => deriveStyleDefs(avatarStyles.value?.styles ?? []))
 const perStyle = computed(() => avatarStyles.value?.perStyle ?? 20)
-
-/**
- * 头像商品价目表 path → price（头像商品化）：
- * 从商城 items（type='avatar'）构建；播种前（无 avatar 商品行）priceMap 为空 → 全部按免费处理（向后兼容）。
- */
-const { items, fetchItems, mine, fetchMine } = useShop()
-const priceMap = computed(() => {
-  const m = new Map<string, number>()
-  for (const it of items.value) {
-    if (it.type === 'avatar') m.set(it.renderValue, it.price)
-  }
-  return m
-})
-
-/** 已购买且未过期的头像路径集合（来自「我的装饰」type=avatar 的生效项） */
-const ownedAvatarPaths = computed(() => {
-  const s = new Set<string>()
-  for (const g of mine.value) {
-    if (g.type !== 'avatar') continue
-    for (const it of g.items) {
-      if (it.active) s.add(it.renderValue)
-    }
-  }
-  return s
-})
-onMounted(() => {
-  fetchItems()
-  // 登录后拉持有记录，识别已购付费头像（未登录 401 由 useShop 内部吞掉）
-  fetchMine()
-})
 
 /** 当前展开的风格（默认高亮到用户当前头像所属风格，否则机器人） */
 const expandedStyle = ref<string>(
@@ -122,29 +130,44 @@ function isSelected(style: string, n: number): boolean {
   return props.currentAvatar === localAvatarPath(style, n)
 }
 
-/** 某个头像的商品价格（无商品行 → 0 = 免费） */
-function avatarPrice(style: string, n: number): number {
-  return priceMap.value.get(localAvatarPath(style, n)) ?? 0
-}
-function isPaid(style: string, n: number): boolean {
-  return avatarPrice(style, n) > 0
-}
-function priceOf(style: string, n: number): number {
-  return avatarPrice(style, n)
+// ── 自定义上传 ──
+const {
+  data: uploadedAvatar,
+  isLoading: isUploading,
+  error: uploadError,
+  preview,
+  select: selectFile,
+  upload,
+} = useAvatarUpload()
+
+const acceptAttr = AVATAR_ACCEPT_ATTR
+const maxSizeMb = AVATAR_MAX_SIZE / 1024 / 1024
+
+const fileInput = ref<HTMLInputElement | null>(null)
+/** 当前待上传文件；仅浏览器侧存在（由 change 事件写入），支持失败后原样重试 */
+const pickedFile = ref<File | null>(null)
+
+function pickFile() {
+  fileInput.value?.click()
 }
 
-/** 是否已解锁：免费，或已购且未过期（不再一律按价格判定，否则买了的头像仍显示未解锁） */
-function isLocked(style: string, n: number): boolean {
-  return avatarPrice(style, n) > 0 && !ownedAvatarPaths.value.has(localAvatarPath(style, n))
+/** 选择文件：前置检查不通过则不留下待上传态（错误文案由 composable 给） */
+function onFileChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0] ?? null
+  // 清空 value，使「选同一个文件」也能再次触发 change（重试路径）
+  input.value = ''
+  if (!file) return
+  pickedFile.value = selectFile(file) ? file : null
 }
 
-/** 免费/已拥有 → 选中；未拥有的付费 → 引导去商城解锁（跳 /shop + toast） */
-function onAvatarClick(style: string, n: number) {
-  if (isLocked(style, n)) {
-    toast.add({ title: `「${style}-${String(n).padStart(2, '0')}」需在商城解锁 →`, color: 'warning' })
-    navigateTo('/shop?sub=avatar')
-    return
+async function doUpload() {
+  if (!pickedFile.value) return
+  try {
+    const avatar = await upload(pickedFile.value)
+    emit('uploaded', avatar)
+  } catch {
+    // 错误已写入 composable 的 error（服务端原文），模板展示 + 「重试上传」按钮，不再吞掉
   }
-  emit('select', localAvatarPath(style, n))
 }
 </script>

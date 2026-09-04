@@ -86,13 +86,10 @@ export function useShop() {
     setBalance(res.data.balance)
     if (item) {
       // 单槽覆盖：颜色/称号各一个生效槽，与后端 buyDecoration 的 colorFields 语义一致。
-      // 头像走双槽折叠 [avatar 商品化]：后端下发 avatar 已是「生效头像」（租用未过期则覆盖基础），
-      // 客户端直接回写 avatar 即可，Avatar.vue / getAvatarUrl 不用感知 decorAvatar*。
-      const patch: Partial<User> = item.type === 'avatar'
-        ? { avatar: item.renderValue }
-        : item.type === 'username_color'
-          ? { decorColorValue: item.renderValue, decorColorExpireAt: res.data.expireAt }
-          : { decorTitleValue: item.renderValue, decorTitleStyle: item.renderStyle, decorTitleExpireAt: res.data.expireAt }
+      // 头像已于 §9.2 下线商品化，此处不再有 avatar 分支。
+      const patch: Partial<User> = item.type === 'username_color'
+        ? { decorColorValue: item.renderValue, decorColorExpireAt: res.data.expireAt }
+        : { decorTitleValue: item.renderValue, decorTitleStyle: item.renderStyle, decorTitleExpireAt: res.data.expireAt }
       updateUser(patch)
     }
     return res.data
@@ -108,11 +105,10 @@ export function useShop() {
       `${apiBase.value}/api/shop/mine/${item.id}/activate`,
       { method: 'POST' }
     )
-    const patch: Partial<User> = item.type === 'avatar'
-      ? { avatar: item.renderValue }
-      : item.type === 'username_color'
-        ? { decorColorValue: item.renderValue, decorColorExpireAt: item.expireAt }
-        : { decorTitleValue: item.renderValue, decorTitleStyle: item.renderStyle, decorTitleExpireAt: item.expireAt }
+    // 头像已于 §9.2 下线商品化，佩戴槽只剩颜色/称号
+    const patch: Partial<User> = item.type === 'username_color'
+      ? { decorColorValue: item.renderValue, decorColorExpireAt: item.expireAt }
+      : { decorTitleValue: item.renderValue, decorTitleStyle: item.renderStyle, decorTitleExpireAt: item.expireAt }
     updateUser(patch)
   }
 

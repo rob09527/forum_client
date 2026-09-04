@@ -271,14 +271,19 @@ watch(isLoggedIn, (v) => {
 const renderedContent = computed(() => post.value ? renderMarkdown(post.value.content) : '')
 
 // ── 点赞状态（后端详情不返回"是否已赞"，本地维护，重复点赞时报错时校准） ──
-const likeCount = ref(0)
+/**
+ * 本地点赞数覆盖值：null = 本页还没点过，直接显示详情里的 likeCount。
+ * 不能写成 `ref(0)` + `watchEffect` 回填 —— watcher 在 SSR 阶段不执行，
+ * 服务端会渲染出「0」、客户端水合时才变真实值 → 水合文本不匹配。
+ */
+const likeOverride = ref<number | null>(null)
+const likeCount = computed(() => likeOverride.value ?? post.value?.likeCount ?? 0)
 const liked = ref(false)
 
-watchEffect(() => {
-  if (post.value) {
-    likeCount.value = post.value.likeCount
-    liked.value = false
-  }
+// 详情重新拉取后丢弃本地覆盖，回到后端权威值（watcher 只在客户端跑，SSR 不受影响）
+watch(post, () => {
+  likeOverride.value = null
+  liked.value = false
 })
 
 async function toggleLike() {
@@ -288,10 +293,10 @@ async function toggleLike() {
   }
   try {
     if (liked.value) {
-      likeCount.value = await unlikePost(postId)
+      likeOverride.value = await unlikePost(postId)
       liked.value = false
     } else {
-      likeCount.value = await likePost(postId)
+      likeOverride.value = await likePost(postId)
       liked.value = true
     }
   } catch (err: any) {
@@ -304,12 +309,12 @@ async function toggleLike() {
 }
 
 // ── 收藏状态（后端详情返回 isBookmarked 作初始值，切换后本地维护） ──
-const bookmarked = ref(false)
+/** 同 likeOverride：null = 用详情里的 isBookmarked，避免 SSR 渲染成「收藏」、水合后变「已收藏」 */
+const bookmarkOverride = ref<boolean | null>(null)
+const bookmarked = computed(() => bookmarkOverride.value ?? post.value?.isBookmarked ?? false)
 
-watchEffect(() => {
-  if (post.value) {
-    bookmarked.value = post.value.isBookmarked
-  }
+watch(post, () => {
+  bookmarkOverride.value = null
 })
 
 async function toggleBookmarkClick() {
@@ -318,7 +323,7 @@ async function toggleBookmarkClick() {
     return
   }
   try {
-    bookmarked.value = await toggleBookmark(postId, bookmarked.value)
+    bookmarkOverride.value = await toggleBookmark(postId, bookmarked.value)
   } catch (err: any) {
     toast.add({ title: extractErrorMessage(err, '操作失败'), color: 'error' })
   }
@@ -370,11 +375,12 @@ async function doRemove() {
 // ── 评论区 ──
 const newComment = ref('')
 const commentSubmitting = ref(false)
-const commentCount = ref(0)
-
-watchEffect(() => {
-  if (post.value) commentCount.value = post.value.commentCount
-})
+/**
+ * 评论数：纯派生值，必须用 computed。
+ * 曾写成 `ref(0)` + `watchEffect` 回填，但 watcher 在 SSR 阶段不执行，
+ * 服务端渲染出「0 条评论」、客户端水合时才变成真实数字 → 水合文本不匹配。
+ */
+const commentCount = computed(() => post.value?.commentCount ?? 0)
 
 /** 评论树变化后刷新：重新拉评论 + 同步计数 */
 async function refresh() {

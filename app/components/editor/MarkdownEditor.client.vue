@@ -4,6 +4,7 @@ import { useMediaQuery } from '@vueuse/core'
 import { MdEditor, type ToolbarNames, type ExposeParam } from 'md-editor-v3'
 import type { CompletionSource } from '@codemirror/autocomplete'
 import DOMPurify from 'isomorphic-dompurify'
+import { isExternalHref } from '~/utils/markdown'
 import 'md-editor-v3/lib/style.css'
 import EmojiToolbarButton from './EmojiToolbarButton.vue'
 import ColorToolbarButton from './ColorToolbarButton.vue'
@@ -170,9 +171,25 @@ async function handleUploadImg(files: File[], callback: (urls: string[]) => void
 }
 
 // ── 预览消毒与最终渲染一致 ──
-// 与 utils/markdown.ts renderMarkdown 相同的 DOMPurify 策略(保留 target 新窗口),
-// 让分屏预览里看到的内容安全性和发布后一致。
-const sanitizePreview = (html: string) => DOMPurify.sanitize(html, { ADD_ATTR: ['target'] })
+// 与 utils/markdown.ts renderMarkdown 相同的 DOMPurify 策略,让分屏预览的安全性与发布后一致。
+//
+// ⚠️ 但**外链新窗口这件事这里必须自己做**:正文链路是 marked 的自定义 link renderer 加 target,
+// 而分屏预览走的是 md-editor-v3 自带的 markdown-it,根本不经过那个 renderer ——
+// 所以 §9.4 修好正文后,预览里的外链一度仍在当前页打开。这里在消毒后补齐,
+// 判定口径直接复用 `isExternalHref`(⛔ 不要在本文件重写一份 host 白名单,两处必然漂移)。
+const sanitizePreview = (html: string) => {
+  const clean = DOMPurify.sanitize(html, { ADD_ATTR: ['target', 'rel'] })
+  // 已消毒的片段,用 detached 容器改属性即可(本组件是 .client.vue,不存在 SSR 下无 document 的情况)
+  const holder = document.createElement('div')
+  holder.innerHTML = clean
+  holder.querySelectorAll('a[href]').forEach((a) => {
+    if (!isExternalHref(a.getAttribute('href') ?? '')) return
+    a.setAttribute('target', '_blank')
+    // rel 与 target 同生共死:缺 noopener 时新页面可通过 window.opener 反控本页(tabnabbing 钓鱼)
+    a.setAttribute('rel', 'noopener noreferrer')
+  })
+  return holder.innerHTML
+}
 
 // ── 内置工具栏按钮「怎么用」提示 ──
 // md-editor 用 toolbarTips 同时渲染按钮可见名 + title。为了可见名保持简短、

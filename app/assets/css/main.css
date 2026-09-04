@@ -247,14 +247,18 @@
 .md-editor-preview td { @apply border border-zinc-200 px-3 py-1.5 text-left; }
 .md-editor-preview th { @apply bg-zinc-50 text-zinc-900 font-medium; }
 
-/* 表情包(SVG 无 width/height,浏览器默认会填满容器宽度 → 固定成行内小图标,与编辑器内一致)。
-   尺寸值与 sticker-decoration.ts 的 widget 内联样式保持一致(vertical-align: middle)。 */
+/* 表情包:统一成行内小图标,与编辑器内(sticker-decoration.ts 的 widget 内联样式)一致。
+   ⚠️ 只锁高、宽走 auto,**不能锁 width:1.4em** —— 原写法是当年为「SVG 无固有尺寸会填满容器」写的,
+   但表情目录里还有 103 个位图,其中 6 个宽高比偏离正方形 >20%(最极端 xhj18.gif 143×48),锁死等宽会把它们压变形。
+   `width:auto` 不会退化成撑满容器:47/47 个 Twemoji SVG 都带 `viewBox`,浏览器据此按高度算出等比宽度
+   ——这正是当年那个坑的真正解法。改这里必须回验 SVG 表情仍是小图标而非满屏。
+   `max-width:100%` 只兜底极端宽图不撑破容器,不参与正常尺寸计算。 */
 .markdown-body img[src^="/stickers/"],
 .md-editor-preview img[src^="/stickers/"] {
   display: inline-block;
-  width: 1.4em;
+  width: auto;
   height: 1.4em;
-  max-width: 1.4em;
+  max-width: 100%;
   margin: 0 2px;
   border-radius: 0;
   vertical-align: middle;

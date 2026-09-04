@@ -134,6 +134,7 @@
         <AvatarPicker
           :current-avatar="profile?.avatar ?? ''"
           @select="handleAvatarSelect"
+          @uploaded="handleAvatarUploaded"
         />
       </AppModal>
 
@@ -359,6 +360,15 @@ async function handleAvatarSelect(avatar: string) {
   } catch (err: any) {
     toast.add({ title: extractErrorMessage(err, '更新失败'), color: 'error' })
   }
+}
+
+/** 自定义头像上传成功（落库已在 useAvatarUpload 里做完，⛔ 此处不重复调接口）：
+ *  只做状态同步 —— 顶栏走 authUser，资料卡走本地 profile，两处都即时变。 */
+function handleAvatarUploaded(avatar: string) {
+  updateUser({ avatar })
+  if (profile.value) profile.value = { ...profile.value, avatar }
+  showAvatarPicker.value = false
+  toast.add({ title: '头像已更新', color: 'success' })
 }
 
 // ── 展示辅助 ──
